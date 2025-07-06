@@ -1,4 +1,4 @@
-import { Stylesheet } from "cytoscape";
+import { StylesheetStyle } from "cytoscape";
 import { DESCRIPTION_PROPERTY } from "./constants";
 import { Dag, DagElement, StyleTag, StyleProperties } from "./dag";
 
@@ -59,7 +59,7 @@ export function makeElementStylesheets(
   dag: Dag,
   elementList: DagElement[],
   makeSelectorFunc: (id: string) => string,
-): Stylesheet[] {
+): StylesheetStyle[] {
   return elementList
     .filter((element) => hasStyleData(element))
     .map((element) => ({
@@ -70,15 +70,15 @@ export function makeElementStylesheets(
   // filter out empty stylesheets from any unresolved style tags
 }
 
-export function makeNodeStylesheets(dag: Dag): Stylesheet[] {
+export function makeNodeStylesheets(dag: Dag): StylesheetStyle[] {
   return makeElementStylesheets(dag, dag.getNodeList(), (id) => `node#${id}`);
 }
 
-export function makeEdgeStyleSheets(dag: Dag): Stylesheet[] {
+export function makeEdgeStyleSheets(dag: Dag): StylesheetStyle[] {
   return makeElementStylesheets(dag, dag.getEdgeList(), (id) => `edge#${id}`);
 }
 
-export function makeCompoundNodeStylesheet(dag: Dag): Stylesheet[] {
+export function makeCompoundNodeStylesheet(dag: Dag): StylesheetStyle[] {
   const dagNode = dag.getDagAsDagNode();
   return makeElementStylesheets(dag, [dagNode], (id) => `node#${id}`);
 }
@@ -87,7 +87,7 @@ export function makeDagLineageSelector(dag: Dag): string {
   return !dag.Parent ? "" : `[lineagePath*='/${dag.Id}']`;
 }
 
-export function makeClassStyleSheets(dag: Dag): Stylesheet[] {
+export function makeClassStyleSheets(dag: Dag): StylesheetStyle[] {
   const lineageSelector = makeDagLineageSelector(dag);
   return Array.from(dag.getFlattenedStyles()).map(
     ([styleTag, styleProperties]) => ({
@@ -97,7 +97,7 @@ export function makeClassStyleSheets(dag: Dag): Stylesheet[] {
   );
 }
 
-export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
+export function makeNameStyleSheets(dag: Dag): StylesheetStyle[] {
   const lineageSelector = makeDagLineageSelector(dag);
   const flatStyleMap = dag.getFlattenedStyles();
   return Array.from(dag.getStyleBindings())
@@ -119,10 +119,10 @@ export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
         }
       }),
     )
-    .filter(Boolean) as Stylesheet[];
+    .filter(Boolean) as StylesheetStyle[];
 }
 
-export function getBaseStylesheet(): Stylesheet[] {
+export function getBaseStylesheet(): StylesheetStyle[] {
   return [
     {
       selector: "node",
@@ -142,12 +142,12 @@ export function getBaseStylesheet(): Stylesheet[] {
   ];
 }
 
-export function makeCyStylesheets(dag: Dag): Stylesheet[] {
-  function makeChildStyleSheets(curDag: Dag): Stylesheet[] {
+export function makeCyStylesheets(dag: Dag): StylesheetStyle[] {
+  function makeChildStyleSheets(curDag: Dag): StylesheetStyle[] {
     return curDag.getChildDags().flatMap(makeCyStylesheets);
   }
 
-  const stylesheetsList: Stylesheet[][] = [
+  const stylesheetsList: StylesheetStyle[][] = [
     !dag.Parent ? getBaseStylesheet() : [],
     makeNodeStylesheets(dag),
     makeEdgeStyleSheets(dag),

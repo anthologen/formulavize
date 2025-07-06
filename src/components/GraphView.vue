@@ -55,7 +55,7 @@ const popperFactory: PopperFactory = (
   return { update };
 };
 
-cytoscape.use(dagre);
+cytoscape.use(dagre); // Dagre needs to update underlying @types/cytoscape
 cytoscape.use(cytoscapePopper(popperFactory));
 cytoscape.use(svg);
 
