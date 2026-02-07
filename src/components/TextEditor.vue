@@ -77,6 +77,12 @@ export default defineComponent({
     },
   },
   emits: ["update-editorstate"],
+  expose: ["setEditorText"],
+  data() {
+    return {
+      editorView: null as EditorView | null,
+    };
+  },
   mounted() {
     const emitEditorState = debounce((updatedState: EditorState): void => {
       this.$emit("update-editorstate", updatedState);
@@ -206,6 +212,7 @@ export default defineComponent({
       state: editorState,
       parent: this.$refs.editorview as Element,
     });
+    this.editorView = view;
     view.focus();
 
     watch(
@@ -239,6 +246,21 @@ export default defineComponent({
         });
       },
     );
+  },
+  methods: {
+    /**
+     * Update the editor text content
+     */
+    setEditorText(text: string): void {
+      if (!this.editorView) return;
+      this.editorView.dispatch({
+        changes: {
+          from: 0,
+          to: this.editorView.state.doc.length,
+          insert: text,
+        },
+      });
+    },
   },
 });
 </script>

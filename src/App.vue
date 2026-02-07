@@ -2,6 +2,7 @@
   <splitpanes id="panes" class="default-theme">
     <pane>
       <TextEditor
+        ref="textEditor"
         :editor-debounce-delay="editorDebounceDelay"
         :tab-to-indent="tabToIndent"
         :code-diagnostics="curDiagnostics"
@@ -48,9 +49,11 @@
   </splitpanes>
   <ToolBar
     id="toolbar"
+    :tutorial-mode="tutorialMode"
     @open-export="showExportPopup = true"
     @open-options="showOptionsPopup = true"
     @copy-source="copySourceToClipboard"
+    @toggle-tutorial="toggleTutorialMode"
   />
   <ExportOptionsPopup
     v-model:show-export="showExportPopup"
@@ -88,6 +91,7 @@ import { CompilationError } from "./compiler/compilationErrors";
 import { errorToDiagnostic, ErrorReporter } from "./compiler/errorReporter";
 import { CompletionIndex } from "./autocomplete/autocompletion";
 import { createCompletionIndex } from "./autocomplete/autocompletionFactory";
+import { TutorialManager } from "./tutorial/tutorialManager";
 // @ts-expect-error: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -123,6 +127,9 @@ export default defineComponent({
       selectedRenderer: "cytoscape",
       rendererComponent: markRaw(CytoscapeRenderer) as RendererComponent,
       registeredRenderers: new Map<string, RendererComponent>(),
+      tutorialMode: false,
+      savedEditorText: "",
+      tutorialManager: new TutorialManager(),
     };
   },
   computed: {
@@ -176,6 +183,11 @@ export default defineComponent({
       "minimal",
       markRaw(MinimalExampleRenderer) as RendererComponent,
     );
+    // Register text editor update callback with tutorial manager
+    this.tutorialManager.registerTextEditorUpdate((text: string) => {
+      const textEditor = this.$refs.textEditor as typeof TextEditor;
+      textEditor?.setEditorText(text);
+    });
   },
   methods: {
     repaint() {
@@ -202,6 +214,23 @@ export default defineComponent({
         await navigator.clipboard.writeText(sourceText);
       } catch (err) {
         console.error("Failed to copy to clipboard:", err);
+      }
+    },
+    toggleTutorialMode() {
+      try {
+        if (!this.tutorialMode) {
+          this.savedEditorText = this.curEditorState.doc.toString();
+          this.tutorialMode = true;
+          this.tutorialManager.startTutorial();
+        } else {
+          this.tutorialMode = false;
+          this.tutorialManager.stopTutorial();
+          const textEditor = this.$refs.textEditor as typeof TextEditor;
+          textEditor?.setEditorText(this.savedEditorText);
+        }
+      } catch (err) {
+        console.error("Error toggling tutorial mode:", err);
+        this.tutorialMode = false;
       }
     },
   },
