@@ -248,9 +248,6 @@ export default defineComponent({
     );
   },
   methods: {
-    /**
-     * Update the editor text content
-     */
     setEditorText(text: string): void {
       if (!this.editorView) return;
       this.editorView.dispatch({

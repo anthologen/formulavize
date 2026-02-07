@@ -49,11 +49,10 @@
   </splitpanes>
   <ToolBar
     id="toolbar"
-    :tutorial-mode="tutorialMode"
+    v-model:tutorial-mode="tutorialMode"
     @open-export="showExportPopup = true"
     @open-options="showOptionsPopup = true"
     @copy-source="copySourceToClipboard"
-    @toggle-tutorial="toggleTutorialMode"
   />
   <ExportOptionsPopup
     v-model:show-export="showExportPopup"
@@ -173,6 +172,21 @@ export default defineComponent({
         console.error(`Renderer with id "${newRendererId}" not found`);
       }
     },
+    tutorialMode(newVal: boolean) {
+      try {
+        if (newVal) {
+          this.savedEditorText = this.curEditorState.doc.toString();
+          this.tutorialManager.startTutorial();
+        } else {
+          this.tutorialManager.stopTutorial();
+          const textEditor = this.$refs.textEditor as typeof TextEditor;
+          textEditor?.setEditorText(this.savedEditorText);
+        }
+      } catch (err) {
+        console.error("Error toggling tutorial mode:", err);
+        this.tutorialMode = false;
+      }
+    },
   },
   mounted() {
     this.registerRenderer(
@@ -214,23 +228,6 @@ export default defineComponent({
         await navigator.clipboard.writeText(sourceText);
       } catch (err) {
         console.error("Failed to copy to clipboard:", err);
-      }
-    },
-    toggleTutorialMode() {
-      try {
-        if (!this.tutorialMode) {
-          this.savedEditorText = this.curEditorState.doc.toString();
-          this.tutorialMode = true;
-          this.tutorialManager.startTutorial();
-        } else {
-          this.tutorialMode = false;
-          this.tutorialManager.stopTutorial();
-          const textEditor = this.$refs.textEditor as typeof TextEditor;
-          textEditor?.setEditorText(this.savedEditorText);
-        }
-      } catch (err) {
-        console.error("Error toggling tutorial mode:", err);
-        this.tutorialMode = false;
       }
     },
   },

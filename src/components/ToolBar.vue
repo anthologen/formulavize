@@ -3,7 +3,7 @@
     <img id="logo" src="/assets/formulavize_logo.svg" alt="Formulavize logo" />
     <h1>formulavize</h1>
     <v-btn-group density="comfortable">
-      <v-btn-toggle v-model="toggleBtnVal" density="comfortable">
+      <v-btn-toggle v-model="tutorialModeModel" density="comfortable">
         <v-btn value="tutorial" icon>
           <v-icon :icon="mdiSchoolOutline" />
           <v-tooltip activator="parent" text="Tutorial" location="bottom" />
@@ -58,7 +58,7 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ["open-export", "open-options", "copy-source", "toggle-tutorial"],
+  emits: ["open-export", "open-options", "copy-source", "update:tutorialMode"],
   setup() {
     return {
       mdiSchoolOutline,
@@ -68,20 +68,14 @@ export default defineComponent({
       mdiGithub,
     };
   },
-  data() {
-    return {
-      toggleBtnVal: undefined as string | undefined,
-    };
-  },
-  watch: {
-    tutorialMode: {
-      immediate: true,
-      handler(newVal: boolean) {
-        this.toggleBtnVal = newVal ? "tutorial" : undefined;
+  computed: {
+    tutorialModeModel: {
+      get(): string | undefined {
+        return this.tutorialMode ? "tutorial" : undefined;
       },
-    },
-    toggleBtnVal() {
-      this.$emit("toggle-tutorial");
+      set(value: string | undefined) {
+        this.$emit("update:tutorialMode", value === "tutorial");
+      },
     },
   },
 });
