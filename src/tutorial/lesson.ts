@@ -14,13 +14,23 @@ export interface AnimationStep {
 
 export function createAnimationStep(
   text: string,
-  typingSpeed: TypingSpeed = TypingSpeed.Medium,
+  typingSpeed: number = TypingSpeed.Medium,
 ): AnimationStep {
   return {
     text,
     typingSpeedDelayMs: typingSpeed,
   };
 }
+
+const createSpeedHelper =
+  (speed: TypingSpeed) =>
+  (text: string): AnimationStep =>
+    createAnimationStep(text, speed);
+
+export const instant = createSpeedHelper(TypingSpeed.Instant);
+export const fast = createSpeedHelper(TypingSpeed.Fast);
+export const normal = createSpeedHelper(TypingSpeed.Medium);
+export const slow = createSpeedHelper(TypingSpeed.Slow);
 
 export interface Puzzlet {
   instructions: AnimationStep[];

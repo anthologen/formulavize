@@ -1,12 +1,12 @@
-import { Lesson, Puzzlet, createAnimationStep as step } from "./lesson";
+import { Lesson, Puzzlet, normal } from "./lesson";
 import { Compilation } from "src/compiler/compilation";
 
 export function createFizLesson(): Lesson {
   const puzzlets: Puzzlet[] = [
     {
       instructions: [
-        step("// Welcome to the fiz tutorial!\n"),
-        step("// Let's start by writing a simple formula.\n"),
+        normal("// Welcome to the fiz tutorial!\n"),
+        normal("// Let's start by writing a simple formula.\n"),
       ],
       successCondition: (compilation: Compilation) => {
         // Check if DAG has at least one node
@@ -15,8 +15,8 @@ export function createFizLesson(): Lesson {
     },
     {
       instructions: [
-        step("// Congratulatons! You completed the tutorial.\n"),
-        step("// Click the Tutorial button to exit this tutorial.\n"),
+        normal("// Congratulatons! You completed the tutorial.\n"),
+        normal("// Click the Tutorial button to exit this tutorial.\n"),
       ],
       successCondition: (_compilation: Compilation) => false,
     },
