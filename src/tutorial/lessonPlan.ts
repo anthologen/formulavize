@@ -1,18 +1,12 @@
-import { Lesson, Puzzlet } from "./lesson";
+import { Lesson, Puzzlet, createAnimationStep as step } from "./lesson";
 import { Compilation } from "src/compiler/compilation";
 
 export function createInitialLesson(): Lesson {
   const puzzlets: Puzzlet[] = [
     {
       instructions: [
-        {
-          text: "// Welcome to the formulavize tutorial! ",
-          typingSpeedDelayMs: 50,
-        },
-        {
-          text: "Let's start by writing a simple formula.",
-          typingSpeedDelayMs: 50,
-        },
+        step("// Welcome to the formulavize tutorial!\n"),
+        step("// Let's start by writing a simple formula.\n"),
       ],
       successCondition: (compilation: Compilation) => {
         // Check if DAG has at least one node
@@ -21,14 +15,8 @@ export function createInitialLesson(): Lesson {
     },
     {
       instructions: [
-        {
-          text: "// The End! ",
-          typingSpeedDelayMs: 50,
-        },
-        {
-          text: "Please click the Tutorial button to exit this tutorial.",
-          typingSpeedDelayMs: 50,
-        },
+        step("// The End!\n"),
+        step("// Please click the Tutorial button to exit this tutorial.\n"),
       ],
       successCondition: (_compilation: Compilation) => false,
     },

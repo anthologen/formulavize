@@ -1,8 +1,25 @@
 import { Compilation } from "../compiler/compilation";
 
+export enum TypingSpeed {
+  Instant = 0,
+  Fast = 20,
+  Medium = 50,
+  Slow = 100,
+}
+
 export interface AnimationStep {
   text: string;
   typingSpeedDelayMs: number;
+}
+
+export function createAnimationStep(
+  text: string,
+  typingSpeed: TypingSpeed = TypingSpeed.Medium,
+): AnimationStep {
+  return {
+    text,
+    typingSpeedDelayMs: typingSpeed,
+  };
 }
 
 export interface Puzzlet {
