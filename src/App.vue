@@ -200,11 +200,12 @@ export default defineComponent({
       "minimal",
       markRaw(MinimalExampleRenderer) as RendererComponent,
     );
-    // Register text editor update callback with tutorial manager
-    this.tutorialManager.registerTextEditorUpdate((text: string) => {
-      const textEditor = this.$refs.textEditor as typeof TextEditor;
-      textEditor?.setEditorText(text);
-    });
+    this.tutorialManager.setTextEditorUpdateCallback(
+      (text: string, append?: boolean) => {
+        const textEditor = this.$refs.textEditor as typeof TextEditor;
+        textEditor?.setEditorText(text, append);
+      },
+    );
   },
   methods: {
     repaint() {

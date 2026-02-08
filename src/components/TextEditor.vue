@@ -32,6 +32,7 @@ import {
   Extension,
   StateField,
   SelectionRange,
+  EditorSelection,
 } from "@codemirror/state";
 import {
   EditorView,
@@ -248,14 +249,18 @@ export default defineComponent({
     );
   },
   methods: {
-    setEditorText(text: string): void {
+    setEditorText(text: string, append: boolean = false): void {
       if (!this.editorView) return;
+      const docLength = this.editorView.state.doc.length;
+      const insertPos = append ? docLength : 0;
+      const deleteEnd = append ? undefined : docLength;
       this.editorView.dispatch({
         changes: {
-          from: 0,
-          to: this.editorView.state.doc.length,
+          from: insertPos,
+          to: deleteEnd,
           insert: text,
         },
+        selection: EditorSelection.cursor(insertPos + text.length),
       });
     },
   },

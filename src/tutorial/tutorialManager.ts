@@ -3,19 +3,31 @@ import { createInitialLesson } from "./lessonPlan";
 import { Compilation } from "../compiler/compilation";
 
 export class TutorialManager {
-  private textEditorUpdateCallback: ((text: string) => void) | null = null;
+  private textEditorUpdateCallback:
+    | ((text: string, append?: boolean) => void)
+    | null = null;
   private isAnimating: boolean = false;
   private animationHandle: number | null = null;
   private currentLesson: Lesson = createInitialLesson();
 
-  public registerTextEditorUpdate(callback: (text: string) => void): void {
+  public setTextEditorUpdateCallback(
+    callback: (text: string, append?: boolean) => void,
+  ): void {
     this.textEditorUpdateCallback = callback;
+  }
+
+  private setEditorText(text: string): void {
+    this.textEditorUpdateCallback?.(text, false);
+  }
+
+  private appendToEditor(text: string): void {
+    this.textEditorUpdateCallback?.(text, true);
   }
 
   public startTutorial(): void {
     if (!this.textEditorUpdateCallback) {
       console.warn(
-        "Text editor update callback not registered. Cannot start tutorial.",
+        "Text editor update callback not set. Cannot start tutorial.",
       );
       return;
     }
@@ -40,28 +52,15 @@ export class TutorialManager {
   ): Promise<void> {
     this.cancelAnimation(); // Prevent overlapping animations
     this.isAnimating = true;
-
-    let accumulatedText = "";
+    this.setEditorText("");
 
     for (const step of instructions) {
-      if (!this.isAnimating) break; // Allow early exit
-
-      const segmentText = step.text;
-      const typingSpeed = step.typingSpeedDelayMs;
-
-      for (let i = 0; i <= segmentText.length; i++) {
+      for (const char of step.text) {
         if (!this.isAnimating) break;
-
-        const currentSegment = segmentText.substring(0, i);
-        const currentText = accumulatedText + currentSegment;
-        this.textEditorUpdateCallback?.(currentText);
-
-        await this.delay(typingSpeed);
+        this.appendToEditor(char);
+        await this.delay(step.typingSpeedDelayMs);
       }
-
-      accumulatedText += segmentText;
     }
-
     this.isAnimating = false;
   }
 
