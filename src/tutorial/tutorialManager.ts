@@ -1,8 +1,12 @@
+import { Lesson, AnimationStep } from "./lesson";
+import { createInitialLesson } from "./lessonPlan";
+import { Compilation } from "../compiler/compilation";
+
 export class TutorialManager {
   private textEditorUpdateCallback: ((text: string) => void) | null = null;
   private isAnimating: boolean = false;
   private animationHandle: number | null = null;
-  private typingSpeed: number = 50; // milliseconds per character
+  private currentLesson: Lesson = createInitialLesson();
 
   public registerTextEditorUpdate(callback: (text: string) => void): void {
     this.textEditorUpdateCallback = callback;
@@ -15,24 +19,47 @@ export class TutorialManager {
       );
       return;
     }
-    this.animateText("Hello World!");
+    this.currentLesson.reset();
+    const firstPuzzlet = this.currentLesson.getCurrentPuzzlet();
+    this.animateInstructions(firstPuzzlet.instructions);
   }
 
   public stopTutorial(): void {
     this.cancelAnimation();
   }
 
-  private async animateText(fullText: string): Promise<void> {
+  public onCompilation(compilation: Compilation): void {
+    if (!this.currentLesson.canAdvance(compilation)) return;
+    this.currentLesson.advance();
+    const nextPuzzlet = this.currentLesson.getCurrentPuzzlet();
+    this.animateInstructions(nextPuzzlet.instructions);
+  }
+
+  private async animateInstructions(
+    instructions: AnimationStep[],
+  ): Promise<void> {
     this.cancelAnimation(); // Prevent overlapping animations
     this.isAnimating = true;
 
-    for (let i = 0; i <= fullText.length; i++) {
+    let accumulatedText = "";
+
+    for (const step of instructions) {
       if (!this.isAnimating) break; // Allow early exit
 
-      const currentText = fullText.substring(0, i);
-      this.textEditorUpdateCallback?.(currentText);
+      const segmentText = step.text;
+      const typingSpeed = step.typingSpeedDelayMs;
 
-      await this.delay(this.typingSpeed);
+      for (let i = 0; i <= segmentText.length; i++) {
+        if (!this.isAnimating) break;
+
+        const currentSegment = segmentText.substring(0, i);
+        const currentText = accumulatedText + currentSegment;
+        this.textEditorUpdateCallback?.(currentText);
+
+        await this.delay(typingSpeed);
+      }
+
+      accumulatedText += segmentText;
     }
 
     this.isAnimating = false;

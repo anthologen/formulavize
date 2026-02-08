@@ -159,6 +159,9 @@ export default defineComponent({
         async (path) =>
           (await this.compiler.ImportCacher.getCachedCompilation(path))?.AST,
       );
+      if (this.tutorialMode) {
+        this.tutorialManager.onCompilation(curCompilation);
+      }
     },
     debugMode() {
       this.repaint(); // repaint the conditionally rendered GraphView
