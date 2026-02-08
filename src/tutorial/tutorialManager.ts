@@ -1,5 +1,5 @@
 import { Lesson, AnimationStep } from "./lesson";
-import { createInitialLesson } from "./lessonPlan";
+import { createFizLesson } from "./lessonPlan";
 import { Compilation } from "../compiler/compilation";
 
 export class TutorialManager {
@@ -8,7 +8,7 @@ export class TutorialManager {
     | null = null;
   private isAnimating: boolean = false;
   private animationHandle: number | null = null;
-  private currentLesson: Lesson = createInitialLesson();
+  private currentLesson: Lesson = createFizLesson();
 
   public setTextEditorUpdateCallback(
     callback: (text: string, append?: boolean) => void,
@@ -47,12 +47,18 @@ export class TutorialManager {
     this.animateInstructions(nextPuzzlet.instructions);
   }
 
+  private getProgressString(): string {
+    const curIdx = this.currentLesson.getCurrentPuzzletIndex();
+    const numPuzzlets = this.currentLesson.getNumPuzzlets();
+    return `// fiz tutorial (${curIdx + 1}/${numPuzzlets})\n`;
+  }
+
   private async animateInstructions(
     instructions: AnimationStep[],
   ): Promise<void> {
     this.cancelAnimation(); // Prevent overlapping animations
     this.isAnimating = true;
-    this.setEditorText("");
+    this.setEditorText(this.getProgressString()); // Clear editor before starting new instructions
 
     for (const step of instructions) {
       for (const char of step.text) {

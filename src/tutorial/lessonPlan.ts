@@ -1,11 +1,11 @@
 import { Lesson, Puzzlet, createAnimationStep as step } from "./lesson";
 import { Compilation } from "src/compiler/compilation";
 
-export function createInitialLesson(): Lesson {
+export function createFizLesson(): Lesson {
   const puzzlets: Puzzlet[] = [
     {
       instructions: [
-        step("// Welcome to the formulavize tutorial!\n"),
+        step("// Welcome to the fiz tutorial!\n"),
         step("// Let's start by writing a simple formula.\n"),
       ],
       successCondition: (compilation: Compilation) => {
@@ -15,8 +15,8 @@ export function createInitialLesson(): Lesson {
     },
     {
       instructions: [
-        step("// The End!\n"),
-        step("// Please click the Tutorial button to exit this tutorial.\n"),
+        step("// Congratulatons! You completed the tutorial.\n"),
+        step("// Click the Tutorial button to exit this tutorial.\n"),
       ],
       successCondition: (_compilation: Compilation) => false,
     },

@@ -35,6 +35,14 @@ export class Lesson {
     this.puzzlets = puzzlets;
   }
 
+  public getCurrentPuzzletIndex(): number {
+    return this.currentPuzzletIndex;
+  }
+
+  public getNumPuzzlets(): number {
+    return this.puzzlets.length;
+  }
+
   public getCurrentPuzzlet(): Puzzlet {
     return this.puzzlets[this.currentPuzzletIndex];
   }
