@@ -202,7 +202,7 @@ export default defineComponent({
       markRaw(MinimalExampleRenderer) as RendererComponent,
     );
     const textEditor = this.$refs.textEditor as typeof TextEditor;
-    this.tutorialManager.setTextEditorUpdateCallback(
+    this.tutorialManager.setCallbacks(
       (text: string) => textEditor?.setEditorText(text),
       (text: string) => textEditor?.setTutorialHeaderText(text),
       (text: string) => textEditor?.insertAtHeaderBoundary(text),

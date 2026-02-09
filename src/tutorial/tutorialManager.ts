@@ -3,43 +3,51 @@ import { createFizLesson } from "./lessonPlan";
 import { Compilation } from "../compiler/compilation";
 
 export class TutorialManager {
-  private textEditorUpdateCallback: ((text: string) => void) | null = null;
-  private tutorialHeaderUpdateCallback: ((text: string) => void) | null = null;
-  private insertAtHeaderBoundaryCallback: ((text: string) => void) | null =
-    null;
+  private callbacks: {
+    setEditorText: ((text: string) => void) | null;
+    setTutorialHeaderText: ((text: string) => void) | null;
+    insertAtHeaderBoundary: ((text: string) => void) | null;
+  } = {
+    setEditorText: null,
+    setTutorialHeaderText: null,
+    insertAtHeaderBoundary: null,
+  };
+
   private isAnimating: boolean = false;
   private animationHandle: number | null = null;
   private currentLesson: Lesson = createFizLesson();
   private isAdvancing: boolean = false;
   private tutorialActive: boolean = false;
 
-  public setTextEditorUpdateCallback(
-    updateTextEditorCallback: (text: string) => void,
-    tutorialHeaderCallback: (text: string) => void,
-    insertAtHeaderBoundaryCallback: (text: string) => void,
+  public setCallbacks(
+    setEditorText: (text: string) => void,
+    setTutorialHeaderText: (text: string) => void,
+    insertAtHeaderBoundary: (text: string) => void,
   ): void {
-    this.textEditorUpdateCallback = updateTextEditorCallback;
-    this.tutorialHeaderUpdateCallback = tutorialHeaderCallback;
-    this.insertAtHeaderBoundaryCallback = insertAtHeaderBoundaryCallback;
+    this.callbacks = {
+      setEditorText,
+      setTutorialHeaderText,
+      insertAtHeaderBoundary,
+    };
   }
 
   private setEditorText(text: string): void {
-    this.textEditorUpdateCallback?.(text);
+    this.callbacks.setEditorText?.(text);
   }
 
   private setTutorialHeaderText(text: string): void {
-    this.tutorialHeaderUpdateCallback?.(text);
+    this.callbacks.setTutorialHeaderText?.(text);
   }
 
   private insertAtHeaderBoundary(text: string): void {
-    this.insertAtHeaderBoundaryCallback?.(text);
+    this.callbacks.insertAtHeaderBoundary?.(text);
   }
 
   public startTutorial(): void {
     if (
-      !this.textEditorUpdateCallback ||
-      !this.tutorialHeaderUpdateCallback ||
-      !this.insertAtHeaderBoundaryCallback
+      !this.callbacks.setEditorText ||
+      !this.callbacks.setTutorialHeaderText ||
+      !this.callbacks.insertAtHeaderBoundary
     ) {
       console.warn("Text editor callbacks not set. Cannot start tutorial.");
       return;
