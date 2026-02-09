@@ -6,11 +6,11 @@ export class TutorialManager {
   private callbacks: {
     setEditorText: ((text: string) => void) | null;
     setTutorialHeaderText: ((text: string) => void) | null;
-    insertAtHeaderBoundary: ((text: string) => void) | null;
+    setExamplesText: ((text: string) => void) | null;
   } = {
     setEditorText: null,
     setTutorialHeaderText: null,
-    insertAtHeaderBoundary: null,
+    setExamplesText: null,
   };
 
   private isAnimating: boolean = false;
@@ -22,12 +22,12 @@ export class TutorialManager {
   public setCallbacks(
     setEditorText: (text: string) => void,
     setTutorialHeaderText: (text: string) => void,
-    insertAtHeaderBoundary: (text: string) => void,
+    setExamplesText: (text: string) => void,
   ): void {
     this.callbacks = {
       setEditorText,
       setTutorialHeaderText,
-      insertAtHeaderBoundary,
+      setExamplesText,
     };
   }
 
@@ -39,15 +39,15 @@ export class TutorialManager {
     this.callbacks.setTutorialHeaderText?.(text);
   }
 
-  private insertAtHeaderBoundary(text: string): void {
-    this.callbacks.insertAtHeaderBoundary?.(text);
+  private setExamplesText(text: string): void {
+    this.callbacks.setExamplesText?.(text);
   }
 
   public startTutorial(): void {
     if (
       !this.callbacks.setEditorText ||
       !this.callbacks.setTutorialHeaderText ||
-      !this.callbacks.insertAtHeaderBoundary
+      !this.callbacks.setExamplesText
     ) {
       console.warn("Text editor callbacks not set. Cannot start tutorial.");
       return;
@@ -102,9 +102,16 @@ export class TutorialManager {
       }
     }
 
-    // Insert all examples at the header boundary (all are editable)
-    const examplesText = puzzlet.examples.map((step) => step.text).join("");
-    this.insertAtHeaderBoundary(examplesText);
+    // Animate all examples at the header boundary (all are editable)
+    let examplesText = "";
+    for (const step of puzzlet.examples) {
+      for (const char of step.text) {
+        if (!this.isAnimating) break;
+        examplesText += char;
+        this.setExamplesText(examplesText + "\n");
+        await this.delay(step.typingSpeedDelayMs);
+      }
+    }
     this.isAnimating = false;
   }
 

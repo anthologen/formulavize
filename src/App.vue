@@ -205,7 +205,7 @@ export default defineComponent({
     this.tutorialManager.setCallbacks(
       (text: string) => textEditor?.setEditorText(text),
       (text: string) => textEditor?.setTutorialHeaderText(text),
-      (text: string) => textEditor?.insertAtHeaderBoundary(text),
+      (text: string) => textEditor?.setExamplesText(text),
     );
   },
   methods: {

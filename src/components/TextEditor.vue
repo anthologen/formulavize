@@ -61,6 +61,9 @@ import { getAllDynamicCompletionSources } from "../autocomplete/autocompleter";
 // StateEffect to set the length of the read-only tutorial header
 const setReadOnlyHeaderLengthEffect = StateEffect.define<number>();
 
+// StateEffect to set the position where examples end
+const setExamplesEndPositionEffect = StateEffect.define<number>();
+
 // Annotation to bypass write protection when programmatically updating the editor content
 const bypassWriteProtection = Annotation.define<boolean>();
 
@@ -72,6 +75,21 @@ const readOnlyHeaderLengthField = StateField.define<number>({
   update(value, transaction) {
     for (const effect of transaction.effects) {
       if (effect.is(setReadOnlyHeaderLengthEffect)) {
+        value = effect.value;
+      }
+    }
+    return value;
+  },
+});
+
+// StateField to track where the examples section ends
+const examplesEndPositionField = StateField.define<number>({
+  create() {
+    return 0;
+  },
+  update(value, transaction) {
+    for (const effect of transaction.effects) {
+      if (effect.is(setExamplesEndPositionEffect)) {
         value = effect.value;
       }
     }
@@ -130,7 +148,7 @@ export default defineComponent({
     },
   },
   emits: ["update-editorstate"],
-  expose: ["setEditorText", "setTutorialHeaderText", "insertAtHeaderBoundary"],
+  expose: ["setEditorText", "setTutorialHeaderText", "setExamplesText"],
   data() {
     return {
       editorView: null as EditorView | null,
@@ -250,7 +268,6 @@ export default defineComponent({
           return this.codeDiagnostics;
         }),
         EditorView.lineWrapping,
-        readOnlyHeaderLengthField,
         EditorView.updateListener.of((v: ViewUpdate): void => {
           if (v.docChanged) emitEditorState(v.state);
         }),
@@ -259,6 +276,8 @@ export default defineComponent({
           createAutocompletion(this.completionIndex),
         ),
         cursorTooltipCompartment.of(createCursorTooltip(this.debugMode)),
+        readOnlyHeaderLengthField,
+        examplesEndPositionField,
         tutorialHeaderCompartment.of(
           createTutorialHeaderProtection(this.tutorialMode),
         ),
@@ -350,25 +369,28 @@ export default defineComponent({
           to: headerLength,
           insert: text,
         },
-        effects: [setReadOnlyHeaderLengthEffect.of(text.length)],
+        effects: [
+          setReadOnlyHeaderLengthEffect.of(text.length),
+          setExamplesEndPositionEffect.of(0),
+        ],
         annotations: bypassWriteProtection.of(true),
       });
     },
-    insertAtHeaderBoundary(text: string): void {
+    setExamplesText(text: string): void {
       if (!this.editorView) return;
       const headerLength = this.editorView.state.field(
         readOnlyHeaderLengthField,
       );
+      const examplesEnd = this.editorView.state.field(examplesEndPositionField);
+      const examplesEndPosition = examplesEnd > 0 ? examplesEnd : headerLength;
       this.editorView.dispatch({
         changes: {
           from: headerLength,
-          to: headerLength,
+          to: examplesEndPosition,
           insert: text,
         },
+        effects: [setExamplesEndPositionEffect.of(headerLength + text.length)],
         annotations: bypassWriteProtection.of(true),
-      });
-      this.editorView.dispatch({
-        selection: EditorSelection.cursor(this.editorView.state.doc.length),
       });
     },
   },
