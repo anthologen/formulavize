@@ -10,15 +10,18 @@ export enum TypingSpeed {
 export interface AnimationStep {
   text: string;
   typingSpeedDelayMs: number;
+  editable?: boolean;
 }
 
 export function createAnimationStep(
   text: string,
   typingSpeed: number = TypingSpeed.Medium,
+  editable: boolean = false,
 ): AnimationStep {
   return {
     text,
     typingSpeedDelayMs: typingSpeed,
+    editable,
   };
 }
 
@@ -31,6 +34,13 @@ export const instant = createSpeedHelper(TypingSpeed.Instant);
 export const fast = createSpeedHelper(TypingSpeed.Fast);
 export const normal = createSpeedHelper(TypingSpeed.Medium);
 export const slow = createSpeedHelper(TypingSpeed.Slow);
+
+const createEditableSpeedHelper =
+  (speed: TypingSpeed) =>
+  (text: string): AnimationStep =>
+    createAnimationStep(text, speed, true);
+
+export const editable = createEditableSpeedHelper(TypingSpeed.Fast);
 
 export interface Puzzlet {
   instructions: AnimationStep[];

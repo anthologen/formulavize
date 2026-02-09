@@ -6,51 +6,77 @@ export class TutorialManager {
   private textEditorUpdateCallback:
     | ((text: string, append?: boolean) => void)
     | null = null;
+  private tutorialHeaderUpdateCallback: ((text: string) => void) | null = null;
+  private insertAtHeaderBoundaryCallback: ((text: string) => void) | null =
+    null;
   private isAnimating: boolean = false;
   private animationHandle: number | null = null;
   private currentLesson: Lesson = createFizLesson();
+  private isAdvancing: boolean = false;
+  private tutorialActive: boolean = false;
 
   public setTextEditorUpdateCallback(
     callback: (text: string, append?: boolean) => void,
+    tutorialHeaderCallback: (text: string) => void,
+    insertAtHeaderBoundaryCallback: (text: string) => void,
   ): void {
     this.textEditorUpdateCallback = callback;
+    this.tutorialHeaderUpdateCallback = tutorialHeaderCallback;
+    this.insertAtHeaderBoundaryCallback = insertAtHeaderBoundaryCallback;
   }
 
   private setEditorText(text: string): void {
     this.textEditorUpdateCallback?.(text, false);
   }
 
-  private appendToEditor(text: string): void {
-    this.textEditorUpdateCallback?.(text, true);
+  private setTutorialHeaderText(text: string): void {
+    this.tutorialHeaderUpdateCallback?.(text);
+  }
+
+  private insertAtHeaderBoundary(text: string): void {
+    this.insertAtHeaderBoundaryCallback?.(text);
   }
 
   public startTutorial(): void {
-    if (!this.textEditorUpdateCallback) {
-      console.warn(
-        "Text editor update callback not set. Cannot start tutorial.",
-      );
+    if (
+      !this.textEditorUpdateCallback ||
+      !this.tutorialHeaderUpdateCallback ||
+      !this.insertAtHeaderBoundaryCallback
+    ) {
+      console.warn("Text editor callbacks not set. Cannot start tutorial.");
       return;
     }
     this.currentLesson.reset();
+    this.tutorialActive = true;
+    this.setEditorText("");
     const firstPuzzlet = this.currentLesson.getCurrentPuzzlet();
     this.animateInstructions(firstPuzzlet.instructions);
   }
 
   public stopTutorial(): void {
+    this.tutorialActive = false;
     this.cancelAnimation();
   }
 
-  public onCompilation(compilation: Compilation): void {
+  public async onCompilation(compilation: Compilation): Promise<void> {
+    if (!this.tutorialActive || this.isAdvancing) return;
     if (!this.currentLesson.canAdvance(compilation)) return;
-    this.currentLesson.advance();
-    const nextPuzzlet = this.currentLesson.getCurrentPuzzlet();
-    this.animateInstructions(nextPuzzlet.instructions);
+    this.isAdvancing = true;
+    try {
+      await this.delay(500); // Small delay before advancing to allow user to see the successful change
+      if (!this.tutorialActive) return;
+      this.currentLesson.advance();
+      const nextPuzzlet = this.currentLesson.getCurrentPuzzlet();
+      this.animateInstructions(nextPuzzlet.instructions);
+    } finally {
+      this.isAdvancing = false;
+    }
   }
 
   private getProgressString(): string {
     const curIdx = this.currentLesson.getCurrentPuzzletIndex();
     const numPuzzlets = this.currentLesson.getNumPuzzlets();
-    return `// fiz tutorial (${curIdx + 1}/${numPuzzlets})\n`;
+    return `fiz tutorial (${curIdx + 1}/${numPuzzlets})\n`;
   }
 
   private async animateInstructions(
@@ -58,15 +84,23 @@ export class TutorialManager {
   ): Promise<void> {
     this.cancelAnimation(); // Prevent overlapping animations
     this.isAnimating = true;
-    this.setEditorText(this.getProgressString()); // Clear editor before starting new instructions
 
-    for (const step of instructions) {
+    let headerText = this.getProgressString();
+    this.setTutorialHeaderText(headerText);
+
+    const lockedSteps = instructions.filter((step) => !step.editable);
+    for (const step of lockedSteps) {
       for (const char of step.text) {
         if (!this.isAnimating) break;
-        this.appendToEditor(char);
+        headerText += char;
+        this.setTutorialHeaderText("/* " + headerText + " */\n");
         await this.delay(step.typingSpeedDelayMs);
       }
     }
+
+    const editableSteps = instructions.filter((step) => step.editable);
+    const editableText = editableSteps.map((step) => step.text).join("");
+    this.insertAtHeaderBoundary(editableText);
     this.isAnimating = false;
   }
 

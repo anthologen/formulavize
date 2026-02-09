@@ -31,8 +31,10 @@ import {
   Compartment,
   Extension,
   StateField,
+  Annotation,
   SelectionRange,
   EditorSelection,
+  StateEffect,
 } from "@codemirror/state";
 import {
   EditorView,
@@ -51,6 +53,52 @@ import {
 import { fizLanguage } from "@formulavize/lang-fiz";
 import { CompletionIndex } from "../autocomplete/autocompletion";
 import { getAllDynamicCompletionSources } from "../autocomplete/autocompleter";
+
+// Tutorial header protection logic
+// This logic ensures that the tutorial header (a section of the editor
+// reserved for tutorial instructions) cannot be edited by the user when tutorial mode is enabled.
+
+// StateEffect to set the length of the read-only tutorial header
+const setReadOnlyHeaderLengthEffect = StateEffect.define<number>();
+
+// Annotation to bypass write protection when programmatically updating the editor content
+const bypassWriteProtection = Annotation.define<boolean>();
+
+// StateField to track the length of the tutorial header
+const readOnlyHeaderLengthField = StateField.define<number>({
+  create() {
+    return 0;
+  },
+  update(value, transaction) {
+    for (const effect of transaction.effects) {
+      if (effect.is(setReadOnlyHeaderLengthEffect)) {
+        value = effect.value;
+      }
+    }
+    return value;
+  },
+});
+
+// Transaction filter to block edits in the tutorial header
+const readOnlyHeaderTransactionFilter = EditorState.transactionFilter.of(
+  (transaction) => {
+    if (!transaction.docChanged) return transaction;
+    if (transaction.annotation(bypassWriteProtection)) return transaction;
+    const headerLength = transaction.startState.field(
+      readOnlyHeaderLengthField,
+    );
+    if (headerLength <= 0) return transaction;
+    let isInputBlocked = false;
+    transaction.changes.iterChanges((fromA) => {
+      if (fromA < headerLength) isInputBlocked = true;
+    });
+    return isInputBlocked ? [] : transaction;
+  },
+);
+
+const createTutorialHeaderProtection = (enabled: boolean): Extension => {
+  return enabled ? [readOnlyHeaderTransactionFilter] : [];
+};
 
 export default defineComponent({
   name: "TextEditor",
@@ -76,9 +124,13 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    tutorialMode: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ["update-editorstate"],
-  expose: ["setEditorText"],
+  expose: ["setEditorText", "setTutorialHeaderText", "insertAtHeaderBoundary"],
   data() {
     return {
       editorView: null as EditorView | null,
@@ -177,6 +229,7 @@ export default defineComponent({
     const keymapCompartment = new Compartment();
     const autocompletionCompartment = new Compartment();
     const cursorTooltipCompartment = new Compartment();
+    const tutorialHeaderCompartment = new Compartment();
 
     const editorState = EditorState.create({
       extensions: [
@@ -197,6 +250,7 @@ export default defineComponent({
           return this.codeDiagnostics;
         }),
         EditorView.lineWrapping,
+        readOnlyHeaderLengthField,
         EditorView.updateListener.of((v: ViewUpdate): void => {
           if (v.docChanged) emitEditorState(v.state);
         }),
@@ -205,6 +259,9 @@ export default defineComponent({
           createAutocompletion(this.completionIndex),
         ),
         cursorTooltipCompartment.of(createCursorTooltip(this.debugMode)),
+        tutorialHeaderCompartment.of(
+          createTutorialHeaderProtection(this.tutorialMode),
+        ),
         fizLanguage,
       ],
     });
@@ -221,6 +278,23 @@ export default defineComponent({
       (isTabbingOn) => {
         view.dispatch({
           effects: keymapCompartment.reconfigure(getKeymap(isTabbingOn)),
+        });
+      },
+    );
+
+    watch(
+      () => this.tutorialMode,
+      (isTutorialMode) => {
+        const effects = [
+          tutorialHeaderCompartment.reconfigure(
+            createTutorialHeaderProtection(isTutorialMode),
+          ),
+        ];
+        if (!isTutorialMode) {
+          effects.push(setReadOnlyHeaderLengthEffect.of(0));
+        }
+        view.dispatch({
+          effects,
         });
       },
     );
@@ -254,13 +328,50 @@ export default defineComponent({
       const docLength = this.editorView.state.doc.length;
       const insertPos = append ? docLength : 0;
       const deleteEnd = append ? undefined : docLength;
+      const effects = append ? [] : [setReadOnlyHeaderLengthEffect.of(0)];
       this.editorView.dispatch({
         changes: {
           from: insertPos,
           to: deleteEnd,
           insert: text,
         },
-        selection: EditorSelection.cursor(insertPos + text.length),
+        effects,
+        annotations: bypassWriteProtection.of(true),
+      });
+      this.editorView.dispatch({
+        selection: EditorSelection.cursor(this.editorView.state.doc.length),
+      });
+    },
+    setTutorialHeaderText(text: string): void {
+      if (!this.editorView) return;
+      const headerLength = this.editorView.state.field(
+        readOnlyHeaderLengthField,
+      );
+      this.editorView.dispatch({
+        changes: {
+          from: 0,
+          to: headerLength,
+          insert: text,
+        },
+        effects: [setReadOnlyHeaderLengthEffect.of(text.length)],
+        annotations: bypassWriteProtection.of(true),
+      });
+    },
+    insertAtHeaderBoundary(text: string): void {
+      if (!this.editorView) return;
+      const headerLength = this.editorView.state.field(
+        readOnlyHeaderLengthField,
+      );
+      this.editorView.dispatch({
+        changes: {
+          from: headerLength,
+          to: headerLength,
+          insert: text,
+        },
+        annotations: bypassWriteProtection.of(true),
+      });
+      this.editorView.dispatch({
+        selection: EditorSelection.cursor(this.editorView.state.doc.length),
       });
     },
   },

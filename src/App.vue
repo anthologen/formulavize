@@ -8,6 +8,7 @@
         :code-diagnostics="curDiagnostics"
         :completion-index="curCompletionIndex"
         :debug-mode="debugMode"
+        :tutorial-mode="tutorialMode"
         @update-editorstate="updateEditorState"
       />
     </pane>
@@ -204,6 +205,14 @@ export default defineComponent({
       (text: string, append?: boolean) => {
         const textEditor = this.$refs.textEditor as typeof TextEditor;
         textEditor?.setEditorText(text, append);
+      },
+      (text: string) => {
+        const textEditor = this.$refs.textEditor as typeof TextEditor;
+        textEditor?.setTutorialHeaderText(text);
+      },
+      (text: string) => {
+        const textEditor = this.$refs.textEditor as typeof TextEditor;
+        textEditor?.insertAtHeaderBoundary(text);
       },
     );
   },
