@@ -35,6 +35,7 @@ import {
   SelectionRange,
   EditorSelection,
   StateEffect,
+  StateEffectType,
 } from "@codemirror/state";
 import {
   EditorView,
@@ -58,44 +59,38 @@ import { getAllDynamicCompletionSources } from "../autocomplete/autocompleter";
 // This logic ensures that the tutorial header (a section of the editor
 // reserved for tutorial instructions) cannot be edited by the user when tutorial mode is enabled.
 
+// Factory function to create a number-based StateField that responds to a StateEffect
+const createNumberStateField = (stateEffect: StateEffectType<number>) =>
+  StateField.define<number>({
+    create() {
+      return 0;
+    },
+    update(value, transaction) {
+      for (const effect of transaction.effects) {
+        if (effect.is(stateEffect)) {
+          value = effect.value;
+        }
+      }
+      return value;
+    },
+  });
+
 // StateEffect to set the length of the read-only tutorial header
 const setReadOnlyHeaderLengthEffect = StateEffect.define<number>();
+// StateField to track the length of the tutorial header
+const readOnlyHeaderLengthField = createNumberStateField(
+  setReadOnlyHeaderLengthEffect,
+);
 
 // StateEffect to set the position where examples end
 const setExamplesEndPositionEffect = StateEffect.define<number>();
+// StateField to track where the examples section ends
+const examplesEndPositionField = createNumberStateField(
+  setExamplesEndPositionEffect,
+);
 
 // Annotation to bypass write protection when programmatically updating the editor content
 const bypassWriteProtection = Annotation.define<boolean>();
-
-// StateField to track the length of the tutorial header
-const readOnlyHeaderLengthField = StateField.define<number>({
-  create() {
-    return 0;
-  },
-  update(value, transaction) {
-    for (const effect of transaction.effects) {
-      if (effect.is(setReadOnlyHeaderLengthEffect)) {
-        value = effect.value;
-      }
-    }
-    return value;
-  },
-});
-
-// StateField to track where the examples section ends
-const examplesEndPositionField = StateField.define<number>({
-  create() {
-    return 0;
-  },
-  update(value, transaction) {
-    for (const effect of transaction.effects) {
-      if (effect.is(setExamplesEndPositionEffect)) {
-        value = effect.value;
-      }
-    }
-    return value;
-  },
-});
 
 // Transaction filter to block edits in the tutorial header
 const readOnlyHeaderTransactionFilter = EditorState.transactionFilter.of(
