@@ -201,19 +201,11 @@ export default defineComponent({
       "minimal",
       markRaw(MinimalExampleRenderer) as RendererComponent,
     );
+    const textEditor = this.$refs.textEditor as typeof TextEditor;
     this.tutorialManager.setTextEditorUpdateCallback(
-      (text: string, append?: boolean) => {
-        const textEditor = this.$refs.textEditor as typeof TextEditor;
-        textEditor?.setEditorText(text, append);
-      },
-      (text: string) => {
-        const textEditor = this.$refs.textEditor as typeof TextEditor;
-        textEditor?.setTutorialHeaderText(text);
-      },
-      (text: string) => {
-        const textEditor = this.$refs.textEditor as typeof TextEditor;
-        textEditor?.insertAtHeaderBoundary(text);
-      },
+      (text: string) => textEditor?.setEditorText(text),
+      (text: string) => textEditor?.setTutorialHeaderText(text),
+      (text: string) => textEditor?.insertAtHeaderBoundary(text),
     );
   },
   methods: {

@@ -323,19 +323,16 @@ export default defineComponent({
     );
   },
   methods: {
-    setEditorText(text: string, append: boolean = false): void {
+    setEditorText(text: string): void {
       if (!this.editorView) return;
       const docLength = this.editorView.state.doc.length;
-      const insertPos = append ? docLength : 0;
-      const deleteEnd = append ? undefined : docLength;
-      const effects = append ? [] : [setReadOnlyHeaderLengthEffect.of(0)];
       this.editorView.dispatch({
         changes: {
-          from: insertPos,
-          to: deleteEnd,
+          from: 0,
+          to: docLength,
           insert: text,
         },
-        effects,
+        effects: [setReadOnlyHeaderLengthEffect.of(0)],
         annotations: bypassWriteProtection.of(true),
       });
       this.editorView.dispatch({

@@ -3,9 +3,7 @@ import { createFizLesson } from "./lessonPlan";
 import { Compilation } from "../compiler/compilation";
 
 export class TutorialManager {
-  private textEditorUpdateCallback:
-    | ((text: string, append?: boolean) => void)
-    | null = null;
+  private textEditorUpdateCallback: ((text: string) => void) | null = null;
   private tutorialHeaderUpdateCallback: ((text: string) => void) | null = null;
   private insertAtHeaderBoundaryCallback: ((text: string) => void) | null =
     null;
@@ -16,17 +14,17 @@ export class TutorialManager {
   private tutorialActive: boolean = false;
 
   public setTextEditorUpdateCallback(
-    callback: (text: string, append?: boolean) => void,
+    updateTextEditorCallback: (text: string) => void,
     tutorialHeaderCallback: (text: string) => void,
     insertAtHeaderBoundaryCallback: (text: string) => void,
   ): void {
-    this.textEditorUpdateCallback = callback;
+    this.textEditorUpdateCallback = updateTextEditorCallback;
     this.tutorialHeaderUpdateCallback = tutorialHeaderCallback;
     this.insertAtHeaderBoundaryCallback = insertAtHeaderBoundaryCallback;
   }
 
   private setEditorText(text: string): void {
-    this.textEditorUpdateCallback?.(text, false);
+    this.textEditorUpdateCallback?.(text);
   }
 
   private setTutorialHeaderText(text: string): void {
