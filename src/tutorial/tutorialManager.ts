@@ -1,4 +1,4 @@
-import { Lesson, AnimationStep } from "./lesson";
+import { Lesson, Puzzlet } from "./lesson";
 import { createFizLesson } from "./lessonPlan";
 import { Compilation } from "../compiler/compilation";
 
@@ -56,7 +56,7 @@ export class TutorialManager {
     this.tutorialActive = true;
     this.setEditorText("");
     const firstPuzzlet = this.currentLesson.getCurrentPuzzlet();
-    this.animateInstructions(firstPuzzlet.instructions);
+    this.animatePuzzlet(firstPuzzlet);
   }
 
   public stopTutorial(): void {
@@ -73,7 +73,7 @@ export class TutorialManager {
       if (!this.tutorialActive) return;
       this.currentLesson.advance();
       const nextPuzzlet = this.currentLesson.getCurrentPuzzlet();
-      this.animateInstructions(nextPuzzlet.instructions);
+      this.animatePuzzlet(nextPuzzlet);
     } finally {
       this.isAdvancing = false;
     }
@@ -85,17 +85,15 @@ export class TutorialManager {
     return `fiz tutorial (${curIdx + 1}/${numPuzzlets})\n`;
   }
 
-  private async animateInstructions(
-    instructions: AnimationStep[],
-  ): Promise<void> {
+  private async animatePuzzlet(puzzlet: Puzzlet): Promise<void> {
     this.cancelAnimation(); // Prevent overlapping animations
     this.isAnimating = true;
 
     let headerText = this.getProgressString();
     this.setTutorialHeaderText(headerText);
 
-    const lockedSteps = instructions.filter((step) => !step.editable);
-    for (const step of lockedSteps) {
+    // Animate all instructions in the header
+    for (const step of puzzlet.instructions) {
       for (const char of step.text) {
         if (!this.isAnimating) break;
         headerText += char;
@@ -104,9 +102,9 @@ export class TutorialManager {
       }
     }
 
-    const editableSteps = instructions.filter((step) => step.editable);
-    const editableText = editableSteps.map((step) => step.text).join("");
-    this.insertAtHeaderBoundary(editableText);
+    // Insert all examples at the header boundary (all are editable)
+    const examplesText = puzzlet.examples.map((step) => step.text).join("");
+    this.insertAtHeaderBoundary(examplesText);
     this.isAnimating = false;
   }
 

@@ -1,4 +1,4 @@
-import { Lesson, Puzzlet, normal, editable } from "./lesson";
+import { Lesson, Puzzlet, normal, fast } from "./lesson";
 import { Compilation } from "src/compiler/compilation";
 
 export function createFizLesson(): Lesson {
@@ -8,8 +8,8 @@ export function createFizLesson(): Lesson {
         normal("Welcome to the fiz tutorial!\n"),
         normal("This is an interactive fiz language tutorial\n"),
         normal("Start by uncommenting the following line:"),
-        editable("// f()"),
       ],
+      examples: [fast("// f()")],
       successCondition: (compilation: Compilation) => {
         return compilation.DAG.getNodeList().length > 0;
       },
@@ -21,6 +21,7 @@ export function createFizLesson(): Lesson {
         normal("functions are visualized as nodes\n"),
         normal("Write another function below:"),
       ],
+      examples: [],
       successCondition: (compilation: Compilation) => {
         return compilation.DAG.getNodeList().length >= 2;
       },
@@ -30,6 +31,7 @@ export function createFizLesson(): Lesson {
         normal("Congratulatons! You completed the tutorial\n"),
         normal("Click the Tutorial button to exit this tutorial"),
       ],
+      examples: [],
       successCondition: (_compilation: Compilation) => false,
     },
   ];
