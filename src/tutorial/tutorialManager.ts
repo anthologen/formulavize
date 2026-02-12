@@ -20,6 +20,9 @@ export class TutorialManager {
   private currentLesson: Lesson = createFizLesson();
   private isAdvancing: boolean = false;
   private tutorialActive: boolean = false;
+  // Set to true to disable animations and show all text immediately
+  // meant for testing purposes
+  private disableAnimations: boolean = false;
 
   public setCallbacks(
     setEditorText: (text: string) => void,
@@ -100,6 +103,18 @@ export class TutorialManager {
     this.isAnimating = true;
 
     let headerText = this.getProgressString();
+
+    // If animations are disabled, show all text immediately
+    if (this.disableAnimations) {
+      headerText += puzzlet.instructions.map((step) => step.text).join("");
+      this.setTutorialHeaderText("/* " + headerText + " */\n");
+
+      const examplesText = puzzlet.examples.map((step) => step.text).join("");
+      this.setExamplesText(examplesText + "\n");
+      this.isAnimating = false;
+      return;
+    }
+
     this.setTutorialHeaderText(headerText);
 
     // Animate all instructions in the header
