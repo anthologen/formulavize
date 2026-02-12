@@ -20,8 +20,6 @@ export class TutorialManager {
   private currentLesson: Lesson = createFizLesson();
   private isAdvancing: boolean = false;
   private tutorialActive: boolean = false;
-  // Set to true to disable animations and show all text immediately
-  // meant for testing purposes
   private disableAnimations: boolean = false;
 
   public setCallbacks(
@@ -36,6 +34,10 @@ export class TutorialManager {
       setExamplesText,
       onTutorialComplete,
     };
+  }
+
+  public setDisableAnimations(disable: boolean): void {
+    this.disableAnimations = disable;
   }
 
   private setEditorText(text: string): void {

@@ -164,7 +164,8 @@ export default defineComponent({
         this.tutorialManager.onCompilation(curCompilation);
       }
     },
-    debugMode() {
+    debugMode(newVal: boolean) {
+      this.tutorialManager.setDisableAnimations(newVal);
       this.repaint(); // repaint the conditionally rendered GraphView
     },
     selectedRenderer(newRendererId: string) {
@@ -210,6 +211,7 @@ export default defineComponent({
         this.tutorialMode = false;
       },
     );
+    this.tutorialManager.setDisableAnimations(this.debugMode);
   },
   methods: {
     repaint() {
