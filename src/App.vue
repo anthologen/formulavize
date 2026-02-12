@@ -206,6 +206,9 @@ export default defineComponent({
       (text: string) => textEditor?.setEditorText(text),
       (text: string) => textEditor?.setTutorialHeaderText(text),
       (text: string) => textEditor?.setExamplesText(text),
+      () => {
+        this.tutorialMode = false;
+      },
     );
   },
   methods: {

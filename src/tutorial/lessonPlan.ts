@@ -29,10 +29,14 @@ export function createFizLesson(): Lesson {
     {
       instructions: [
         normal("Congratulatons! You completed the tutorial\n"),
-        normal("Click the Tutorial button to exit this tutorial"),
+        normal("Uncomment the exit() function to exit this tutorial"),
       ],
-      examples: [],
-      successCondition: (_compilation: Compilation) => false,
+      examples: [fast("// exit()")],
+      successCondition: (compilation: Compilation) => {
+        return compilation.DAG.getNodeList().some(
+          (node) => node.name === "exit",
+        );
+      },
     },
   ];
 

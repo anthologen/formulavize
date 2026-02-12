@@ -7,10 +7,12 @@ export class TutorialManager {
     setEditorText: ((text: string) => void) | null;
     setTutorialHeaderText: ((text: string) => void) | null;
     setExamplesText: ((text: string) => void) | null;
+    onTutorialComplete: (() => void) | null;
   } = {
     setEditorText: null,
     setTutorialHeaderText: null,
     setExamplesText: null,
+    onTutorialComplete: null,
   };
 
   private isAnimating: boolean = false;
@@ -23,11 +25,13 @@ export class TutorialManager {
     setEditorText: (text: string) => void,
     setTutorialHeaderText: (text: string) => void,
     setExamplesText: (text: string) => void,
+    onTutorialComplete: (() => void) | null = null,
   ): void {
     this.callbacks = {
       setEditorText,
       setTutorialHeaderText,
       setExamplesText,
+      onTutorialComplete,
     };
   }
 
@@ -72,6 +76,12 @@ export class TutorialManager {
       await this.delay(500); // Small delay before advancing to allow user to see the successful change
       if (!this.tutorialActive) return;
       this.currentLesson.advance();
+      // Exit tutorial mode when the lesson is complete
+      if (this.currentLesson.isComplete()) {
+        this.stopTutorial();
+        this.callbacks.onTutorialComplete?.();
+        return;
+      }
       const nextPuzzlet = this.currentLesson.getCurrentPuzzlet();
       this.animatePuzzlet(nextPuzzlet);
     } finally {
