@@ -3,8 +3,8 @@ import { Compilation } from "../compiler/compilation";
 export enum TypingSpeed {
   Instant = 0,
   Fast = 20,
-  Medium = 50,
-  Slow = 100,
+  Medium = 40,
+  Slow = 80,
 }
 
 export interface AnimationStep {

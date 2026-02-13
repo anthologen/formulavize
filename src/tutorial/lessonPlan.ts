@@ -1,4 +1,4 @@
-import { Lesson, Puzzlet, normal, fast } from "./lesson";
+import { Lesson, Puzzlet, normal, fast, slow } from "./lesson";
 import { Compilation } from "src/compiler/compilation";
 
 export function createFizLesson(): Lesson {
@@ -6,7 +6,7 @@ export function createFizLesson(): Lesson {
     {
       instructions: [
         normal("Welcome to the fiz tutorial!\n"),
-        normal("This is an interactive fiz language tutorial\n"),
+        normal("This is an interactive fiz language tutorial.\n"),
         normal("Start by uncommenting the following line:"),
       ],
       examples: [fast("// f()")],
@@ -16,20 +16,56 @@ export function createFizLesson(): Lesson {
     },
     {
       instructions: [
-        normal("f() is a function\n"),
-        normal("functions consist of a word followed by ( )\n"),
-        normal("functions are visualized as nodes\n"),
-        normal("Write another function below:"),
+        normal("f() is a function.\n"),
+        normal("Functions consist of a word followed by ( ).\n"),
+        normal("Functions are visualized as nodes.\n"),
+        normal("Functions can be input to other functions.\n"),
+        normal("Put another function between the ( )."),
       ],
       examples: [],
       successCondition: (compilation: Compilation) => {
-        return compilation.DAG.getNodeList().length >= 2;
+        return compilation.DAG.getEdgeList().length > 0;
       },
     },
     {
       instructions: [
-        normal("Congratulatons! You completed the tutorial\n"),
-        normal("Uncomment the exit() function to exit this tutorial"),
+        normal("Arguments to functions are visualized as edges.\n"),
+        normal("Functions can also take multiple comma separated inputs.\n"),
+        normal("Add a ',' and another function to the outermost ( )."),
+      ],
+      examples: [],
+      successCondition: (compilation: Compilation) => {
+        return compilation.DAG.getNodeList().some(
+          (node) =>
+            compilation.DAG.getEdgeList().filter(
+              (edge) => edge.destNodeId === node.id,
+            ).length >= 2,
+        );
+      },
+    },
+    {
+      instructions: [
+        normal("Functions can also be arbitrarily nested.\n"),
+        normal("Add another function inside an innermost ( )."),
+      ],
+      examples: [],
+      successCondition: (compilation: Compilation) => {
+        return compilation.DAG.getNodeList().some((node) => {
+          const inDegree = compilation.DAG.getEdgeList().filter(
+            (edge) => edge.destNodeId === node.id,
+          ).length;
+          const outDegree = compilation.DAG.getEdgeList().filter(
+            (edge) => edge.srcNodeId === node.id,
+          ).length;
+          return inDegree >= 1 && outDegree >= 1;
+        });
+      },
+    },
+    {
+      instructions: [
+        slow("Congratulatons! "),
+        normal("You completed the tutorial!\n"),
+        normal("Uncomment the exit() function to exit this tutorial."),
       ],
       examples: [fast("// exit()")],
       successCondition: (compilation: Compilation) => {
