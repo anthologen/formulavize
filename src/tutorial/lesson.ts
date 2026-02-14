@@ -32,18 +32,33 @@ export const fast = createSpeedHelper(TypingSpeed.Fast);
 export const normal = createSpeedHelper(TypingSpeed.Medium);
 export const slow = createSpeedHelper(TypingSpeed.Slow);
 
+// Teach each grammar rule as a ludeme
 export interface Puzzlet {
+  name: string;
   instructions: AnimationStep[];
   examples: AnimationStep[];
   successCondition: (compilation: Compilation) => boolean;
 }
 
+export interface LudicModule {
+  name: string;
+  puzzlets: Puzzlet[];
+}
+
 export class Lesson {
-  private puzzlets: Puzzlet[];
+  private readonly modules: LudicModule[];
+  private readonly flattenedPuzzlets: Puzzlet[];
+  private readonly puzzletIndexToModuleIndex: number[];
   private currentPuzzletIndex: number = 0;
 
-  constructor(puzzlets: Puzzlet[]) {
-    this.puzzlets = puzzlets;
+  constructor(modules: LudicModule[]) {
+    this.modules = modules;
+    this.flattenedPuzzlets = this.modules.flatMap((module) => module.puzzlets);
+
+    // Precompute puzzlet index to module index mapping
+    this.puzzletIndexToModuleIndex = this.modules.flatMap(
+      (module, moduleIndex) => Array(module.puzzlets.length).fill(moduleIndex),
+    );
   }
 
   public getCurrentPuzzletIndex(): number {
@@ -51,15 +66,20 @@ export class Lesson {
   }
 
   public getNumPuzzlets(): number {
-    return this.puzzlets.length;
+    return this.flattenedPuzzlets.length;
   }
 
   public getCurrentPuzzlet(): Puzzlet {
-    return this.puzzlets[this.currentPuzzletIndex];
+    return this.flattenedPuzzlets[this.currentPuzzletIndex];
+  }
+
+  public getCurrentModule(): LudicModule {
+    const moduleIdx = this.puzzletIndexToModuleIndex[this.currentPuzzletIndex];
+    return this.modules[moduleIdx];
   }
 
   public isComplete(): boolean {
-    return this.currentPuzzletIndex >= this.puzzlets.length;
+    return this.currentPuzzletIndex >= this.flattenedPuzzlets.length;
   }
 
   public canAdvance(compilation: Compilation): boolean {

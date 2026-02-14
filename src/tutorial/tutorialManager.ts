@@ -95,9 +95,11 @@ export class TutorialManager {
   }
 
   private getProgressString(): string {
+    const moduleName = this.currentLesson.getCurrentModule().name;
+    const puzzletName = this.currentLesson.getCurrentPuzzlet().name;
     const curIdx = this.currentLesson.getCurrentPuzzletIndex();
     const numPuzzlets = this.currentLesson.getNumPuzzlets();
-    return `fiz tutorial (${curIdx + 1}/${numPuzzlets})\n`;
+    return `${moduleName} Lesson: ${puzzletName} [fiz tutorial (${curIdx + 1}/${numPuzzlets})]\n`;
   }
 
   private async animatePuzzlet(puzzlet: Puzzlet): Promise<void> {

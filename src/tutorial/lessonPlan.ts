@@ -2,19 +2,21 @@ import { Lesson, Puzzlet, normal, fast, slow } from "./lesson";
 import { Compilation } from "src/compiler/compilation";
 
 export function createFizLesson(): Lesson {
-  const puzzlets: Puzzlet[] = [
-    {
-      instructions: [
-        normal("Welcome to the fiz tutorial!\n"),
-        normal("This is an interactive fiz language tutorial.\n"),
-        normal("Start by uncommenting the following line:"),
-      ],
-      examples: [fast("// f()")],
-      successCondition: (compilation: Compilation) => {
-        return compilation.DAG.getNodeList().length > 0;
-      },
+  const introPuzzlet: Puzzlet = {
+    name: "Let's get func-y!",
+    instructions: [
+      normal("Welcome to an interactive fiz language tutorial!\n"),
+      normal("Start by uncommenting the following line:"),
+    ],
+    examples: [fast("// f()")],
+    successCondition: (compilation: Compilation) => {
+      return compilation.DAG.getNodeList().length > 0;
     },
+  };
+
+  const functionsPuzzlets: Puzzlet[] = [
     {
+      name: "Getting Edgy",
       instructions: [
         normal("f() is a function.\n"),
         normal("Functions consist of a word followed by ( ).\n"),
@@ -28,10 +30,11 @@ export function createFizLesson(): Lesson {
       },
     },
     {
+      name: "Double Edged",
       instructions: [
         normal("Arguments to functions are visualized as edges.\n"),
         normal("Functions can also take multiple comma separated inputs.\n"),
-        normal("Add a ',' and another function to the outermost ( )."),
+        normal("Add a ',' and then another function to the outermost ( )."),
       ],
       examples: [],
       successCondition: (compilation: Compilation) => {
@@ -44,6 +47,7 @@ export function createFizLesson(): Lesson {
       },
     },
     {
+      name: "Compose Yourself",
       instructions: [
         normal("Functions can also be arbitrarily nested.\n"),
         normal("Add another function inside an innermost ( )."),
@@ -61,20 +65,33 @@ export function createFizLesson(): Lesson {
         });
       },
     },
-    {
-      instructions: [
-        slow("Congratulatons! "),
-        normal("You completed the tutorial!\n"),
-        normal("Uncomment the exit() function to exit this tutorial."),
-      ],
-      examples: [fast("// exit()")],
-      successCondition: (compilation: Compilation) => {
-        return compilation.DAG.getNodeList().some(
-          (node) => node.name === "exit",
-        );
-      },
-    },
   ];
 
-  return new Lesson(puzzlets);
+  const outroPuzzlet: Puzzlet = {
+    name: "The End of the Beginning",
+    instructions: [
+      slow("Congratulations! "),
+      normal("You completed the tutorial!\n"),
+      normal("Uncomment the exit() function to exit this tutorial."),
+    ],
+    examples: [fast("// exit()")],
+    successCondition: (compilation: Compilation) => {
+      return compilation.DAG.getNodeList().some((node) => node.name === "exit");
+    },
+  };
+
+  const introModule = {
+    name: "Intro",
+    puzzlets: [introPuzzlet],
+  };
+  const functionsModule = {
+    name: "Functions",
+    puzzlets: functionsPuzzlets,
+  };
+  const outroModule = {
+    name: "Outro",
+    puzzlets: [outroPuzzlet],
+  };
+
+  return new Lesson([introModule, functionsModule, outroModule]);
 }
