@@ -113,8 +113,8 @@ export function createFizLesson(): Lesson {
       name: "Making a Statement",
       instructions: [
         normal("Stand-alone function calls and assignments are statements.\n"),
-        normal("There should only be one statement per line"),
-        fast(" (unless ';' separated).\n"),
+        normal("There should only be one statement per line,\n"),
+        normal("unless separated by a semicolon ';'.\n"),
         normal("Statements are run in the order they appear.\n"),
         normal("Reorder the lines so the variable is assigned before used."),
       ],

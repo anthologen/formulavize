@@ -99,7 +99,7 @@ export class TutorialManager {
     const puzzletName = this.currentLesson.getCurrentPuzzlet().name;
     const curIdx = this.currentLesson.getCurrentPuzzletIndex();
     const numPuzzlets = this.currentLesson.getNumPuzzlets();
-    return `${moduleName} Lesson: ${puzzletName} [fiz tutorial (${curIdx + 1}/${numPuzzlets})]\n`;
+    return `fiz tutorial (${curIdx + 1}/${numPuzzlets}) - ${moduleName}: ${puzzletName}\n`;
   }
 
   private async animatePuzzlet(puzzlet: Puzzlet): Promise<void> {
