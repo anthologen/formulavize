@@ -1,6 +1,7 @@
 import { Lesson, Puzzlet, normal, fast, slow } from "./lesson";
-import { DagElement } from "src/compiler/dag";
 import { Compilation } from "src/compiler/compilation";
+import { DagElement } from "src/compiler/dag";
+import { NodeType, AssignmentTreeNode } from "src/compiler/ast";
 
 export function createFizLesson(): Lesson {
   // Intro module
@@ -129,19 +130,32 @@ export function createFizLesson(): Lesson {
       },
     },
     {
-      name: "Polyonymous",
+      name: "Legal Aliases",
       instructions: [
         normal("Variables can be assigned to other variables.\n"),
         normal("The new variable is an alias for the original variable.\n"),
-        normal("Uncomment the last line to use the alias"),
+        normal("Uncomment the function calls to use the alias"),
       ],
       examples: [
         fast("long_variable_name = f()\n"),
         fast("alias = long_variable_name\n"),
         fast("// g(long_variable_name); h(alias)"),
       ],
-      clearEditorOnStart: true,
       successCondition: (compilation: Compilation) => {
+        // Check AST for variable-to-variable assignment
+        const hasVariableToVariableAssignment = compilation.AST.Statements.some(
+          (stmt) => {
+            if (stmt.Type !== NodeType.Assignment) return false;
+            const assignment = stmt as AssignmentTreeNode;
+            if (assignment.Lhs.length !== 1) return false;
+            if (assignment.Rhs?.Type !== NodeType.QualifiedVariable) {
+              return false;
+            }
+            return true;
+          },
+        );
+
+        // Check DAG for alias usage
         const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
         const nodeIdToVarNameCount = new Map<string, number>();
         varNameToNodeIdMap.forEach((nodeId) => {
@@ -150,13 +164,17 @@ export function createFizLesson(): Lesson {
             (nodeIdToVarNameCount.get(nodeId) ?? 0) + 1,
           );
         });
-        return Array.from(nodeIdToVarNameCount.entries()).some(
+        const hasAliasUsedInDAG = Array.from(
+          nodeIdToVarNameCount.entries(),
+        ).some(
           ([nodeId, count]) =>
             count >= 2 &&
             compilation.DAG.getEdgeList().filter(
               (edge) => edge.srcNodeId === nodeId,
             ).length >= 2,
         );
+
+        return hasVariableToVariableAssignment && hasAliasUsedInDAG;
       },
     },
     {
@@ -170,8 +188,17 @@ export function createFizLesson(): Lesson {
         fast("// yolk, white = split(egg())\n"),
         fast("whisk(yolk); whip(white)"),
       ],
-      clearEditorOnStart: true,
       successCondition: (compilation: Compilation) => {
+        // Check AST for multi-variable assignment
+        const hasMultiVariableAssignment = compilation.AST.Statements.some(
+          (stmt) => {
+            if (stmt.Type !== NodeType.Assignment) return false;
+            const assignment = stmt as AssignmentTreeNode;
+            return assignment.Lhs.length >= 2;
+          },
+        );
+
+        // Check DAG for multiple variables referencing same node
         const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
         const nodeIdToVarNameCount = new Map<string, number>();
         varNameToNodeIdMap.forEach((nodeId) => {
@@ -180,13 +207,17 @@ export function createFizLesson(): Lesson {
             (nodeIdToVarNameCount.get(nodeId) ?? 0) + 1,
           );
         });
-        return Array.from(nodeIdToVarNameCount.entries()).some(
+        const hasMultipleVarsInDAG = Array.from(
+          nodeIdToVarNameCount.entries(),
+        ).some(
           ([nodeId, count]) =>
             count >= 2 &&
             compilation.DAG.getEdgeList().filter(
               (edge) => edge.srcNodeId === nodeId,
             ).length >= 2,
         );
+
+        return hasMultiVariableAssignment && hasMultipleVarsInDAG;
       },
     },
     {
