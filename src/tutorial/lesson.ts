@@ -32,6 +32,18 @@ export const fast = createSpeedHelper(TypingSpeed.Fast);
 export const normal = createSpeedHelper(TypingSpeed.Medium);
 export const slow = createSpeedHelper(TypingSpeed.Slow);
 
+export const dramatic = (text: string): AnimationStep[] => {
+  // Type each word with a dramatic pause, then end with a newline
+  const dramaticDelay = 500;
+  const words = text.split(" ");
+  const steps = words.flatMap((word, index) =>
+    index < words.length - 1
+      ? [fast(word), createAnimationStep(" ", dramaticDelay)]
+      : [fast(word)],
+  );
+  return [...steps, createAnimationStep("\n", dramaticDelay)];
+};
+
 // Teach each grammar rule as a ludeme
 export interface Puzzlet {
   name: string;

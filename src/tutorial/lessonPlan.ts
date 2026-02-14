@@ -1,4 +1,4 @@
-import { Lesson, Puzzlet, normal, fast, slow } from "./lesson";
+import { Lesson, Puzzlet, normal, fast, slow, dramatic } from "./lesson";
 import { Compilation } from "src/compiler/compilation";
 import { DagElement } from "src/compiler/dag";
 import { NodeType, AssignmentTreeNode } from "src/compiler/ast";
@@ -186,7 +186,7 @@ export function createFizLesson(): Lesson {
       ],
       examples: [
         fast("// yolk, white = split(egg())\n"),
-        fast("whisk(yolk); whip(white)"),
+        fast("whisk(yolk); whip(white)\n"),
       ],
       successCondition: (compilation: Compilation) => {
         // Check AST for multi-variable assignment
@@ -223,12 +223,12 @@ export function createFizLesson(): Lesson {
     {
       name: "Ace of Diamonds",
       instructions: [
-        normal("Now you're thinking with formulas!\n"),
+        normal("Now you're thinking with formulas!\n"), // Portal
         normal("Formulas form DAGs (Directed Acyclic Graphs).\n"),
-        normal("Functions are nodes.\n"),
-        normal("Args are edges.\n"),
-        normal("Coder is you!\n"),
-        normal("Make a diamond-shaped DAG with 4 nodes to continue."),
+        ...dramatic("FUNCTION IS NODE"),
+        ...dramatic("ARG IS EDGE"),
+        ...dramatic("CODER IS YOU!"), // Baba is you
+        normal("Make a 4-node diamond DAG to continue."),
       ],
       examples: [],
       clearEditorOnStart: true,
