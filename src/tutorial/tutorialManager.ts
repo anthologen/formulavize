@@ -106,6 +106,10 @@ export class TutorialManager {
     this.cancelAnimation(); // Prevent overlapping animations
     this.isAnimating = true;
 
+    if (puzzlet.clearEditorOnStart) {
+      this.setEditorText("");
+    }
+
     let headerText = this.getProgressString();
 
     // If animations are disabled, show all text immediately

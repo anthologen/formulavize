@@ -1,19 +1,26 @@
 import { Lesson, Puzzlet, normal, fast, slow } from "./lesson";
+import { DagElement } from "src/compiler/dag";
 import { Compilation } from "src/compiler/compilation";
 
 export function createFizLesson(): Lesson {
+  // Intro module
   const introPuzzlet: Puzzlet = {
     name: "Let's get func-y!",
     instructions: [
       normal("Welcome to an interactive fiz language tutorial!\n"),
-      normal("Start by uncommenting the following line:"),
+      normal("Start by uncommenting the following line (remove the '//'):"),
     ],
     examples: [fast("// f()")],
     successCondition: (compilation: Compilation) => {
       return compilation.DAG.getNodeList().length > 0;
     },
   };
+  const introModule = {
+    name: "Intro",
+    puzzlets: [introPuzzlet],
+  };
 
+  // Functions module
   const functionsPuzzlets: Puzzlet[] = [
     {
       name: "Getting Edgy",
@@ -34,7 +41,7 @@ export function createFizLesson(): Lesson {
       instructions: [
         normal("Arguments to functions are visualized as edges.\n"),
         normal("Functions can also take multiple comma separated inputs.\n"),
-        normal("Add a ',' and then another function to the outermost ( )."),
+        normal("Add a ',' and then another function in the outermost ( )."),
       ],
       examples: [],
       successCondition: (compilation: Compilation) => {
@@ -66,7 +73,178 @@ export function createFizLesson(): Lesson {
       },
     },
   ];
+  const functionsModule = {
+    name: "Functions",
+    puzzlets: functionsPuzzlets,
+  };
 
+  // Assignment module
+  const assignmentPuzzlets: Puzzlet[] = [
+    {
+      name: "On Assignment",
+      instructions: [
+        normal("Functions can be assigned to variables using '='.\n"),
+        normal("variable_name = function_name()\n"),
+        normal("Uncomment the assignment below:"),
+      ],
+      examples: [fast("// x = f()")],
+      clearEditorOnStart: true,
+      successCondition: (compilation: Compilation) => {
+        return compilation.DAG.getVarNameToNodeIdMap().size > 0;
+      },
+    },
+    {
+      name: "Understand the Assignment",
+      instructions: [
+        normal("Once assigned, variables can be input to functions.\n"),
+        normal("On a new line, input the variable into another function."),
+      ],
+      examples: [],
+      successCondition: (compilation: Compilation) => {
+        const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
+        const assignedNodeIds = new Set(varNameToNodeIdMap.values());
+        return compilation.DAG.getEdgeList().some((edge) =>
+          assignedNodeIds.has(edge.srcNodeId),
+        );
+      },
+    },
+    {
+      name: "Making a Statement",
+      instructions: [
+        normal("Stand-alone function calls and assignments are statements.\n"),
+        normal("There should only be one statement per line"),
+        fast(" (unless ';' separated).\n"),
+        normal("Statements are run in the order they appear.\n"),
+        normal("Reorder the lines so the variable is assigned before used."),
+      ],
+      examples: [fast("g(x); h(x)")],
+      successCondition: (compilation: Compilation) => {
+        const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
+        const assignedNodeIds = new Set(varNameToNodeIdMap.values());
+        return (
+          compilation.DAG.getEdgeList().filter((edge) =>
+            assignedNodeIds.has(edge.srcNodeId),
+          ).length >= 2
+        );
+      },
+    },
+    {
+      name: "Polyonymous",
+      instructions: [
+        normal("Variables can be assigned to other variables.\n"),
+        normal("The new variable is an alias for the original variable.\n"),
+        normal("Uncomment the last line to use the alias"),
+      ],
+      examples: [
+        fast("long_variable_name = f()\n"),
+        fast("alias = long_variable_name\n"),
+        fast("// g(long_variable_name); h(alias)"),
+      ],
+      clearEditorOnStart: true,
+      successCondition: (compilation: Compilation) => {
+        const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
+        const nodeIdToVarNameCount = new Map<string, number>();
+        varNameToNodeIdMap.forEach((nodeId) => {
+          nodeIdToVarNameCount.set(
+            nodeId,
+            (nodeIdToVarNameCount.get(nodeId) ?? 0) + 1,
+          );
+        });
+        return Array.from(nodeIdToVarNameCount.entries()).some(
+          ([nodeId, count]) =>
+            count >= 2 &&
+            compilation.DAG.getEdgeList().filter(
+              (edge) => edge.srcNodeId === nodeId,
+            ).length >= 2,
+        );
+      },
+    },
+    {
+      name: "Do the Splits",
+      instructions: [
+        normal("Multiple variables can be assigned in one statement.\n"),
+        normal("Separate the variables with a comma ',' like x, y, z = f()\n"),
+        normal("Uncomment the assignment below:"),
+      ],
+      examples: [
+        fast("// yolk, white = split(egg())\n"),
+        fast("whisk(yolk); whip(white)"),
+      ],
+      clearEditorOnStart: true,
+      successCondition: (compilation: Compilation) => {
+        const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
+        const nodeIdToVarNameCount = new Map<string, number>();
+        varNameToNodeIdMap.forEach((nodeId) => {
+          nodeIdToVarNameCount.set(
+            nodeId,
+            (nodeIdToVarNameCount.get(nodeId) ?? 0) + 1,
+          );
+        });
+        return Array.from(nodeIdToVarNameCount.entries()).some(
+          ([nodeId, count]) =>
+            count >= 2 &&
+            compilation.DAG.getEdgeList().filter(
+              (edge) => edge.srcNodeId === nodeId,
+            ).length >= 2,
+        );
+      },
+    },
+    {
+      name: "Ace of Diamonds",
+      instructions: [
+        normal("Now you're thinking with formulas!\n"),
+        normal("Formulas form DAGs (Directed Acyclic Graphs).\n"),
+        normal("Functions are nodes.\n"),
+        normal("Args are edges.\n"),
+        normal("Coder is you!\n"),
+        normal("Make a diamond-shaped DAG with 4 nodes to continue."),
+      ],
+      examples: [],
+      clearEditorOnStart: true,
+      successCondition: (compilation: Compilation) => {
+        const nodeList = compilation.DAG.getNodeList();
+        const edgeList = compilation.DAG.getEdgeList();
+
+        if (nodeList.length < 4 || edgeList.length < 4) return false;
+
+        const getInDegree = (node: DagElement) =>
+          edgeList.filter((e) => e.destNodeId === node.id).length;
+        const getOutDegree = (node: DagElement) =>
+          edgeList.filter((e) => e.srcNodeId === node.id).length;
+
+        const topNode = nodeList.find(
+          (node) => getInDegree(node) === 0 && getOutDegree(node) === 2,
+        );
+        if (!topNode) return false;
+
+        const bottomNode = nodeList.find(
+          (node) => getInDegree(node) === 2 && getOutDegree(node) === 0,
+        );
+        if (!bottomNode) return false;
+
+        const middleNodes = nodeList.filter(
+          (node) => getInDegree(node) === 1 && getOutDegree(node) === 1,
+        );
+        if (middleNodes.length < 2) return false;
+
+        return middleNodes.every(
+          (node) =>
+            edgeList.some(
+              (e) => e.srcNodeId === topNode.id && e.destNodeId === node.id,
+            ) &&
+            edgeList.some(
+              (e) => e.srcNodeId === node.id && e.destNodeId === bottomNode.id,
+            ),
+        );
+      },
+    },
+  ];
+  const assignmentModule = {
+    name: "Assignment",
+    puzzlets: assignmentPuzzlets,
+  };
+
+  // Outro module
   const outroPuzzlet: Puzzlet = {
     name: "The End of the Beginning",
     instructions: [
@@ -79,19 +257,15 @@ export function createFizLesson(): Lesson {
       return compilation.DAG.getNodeList().some((node) => node.name === "exit");
     },
   };
-
-  const introModule = {
-    name: "Intro",
-    puzzlets: [introPuzzlet],
-  };
-  const functionsModule = {
-    name: "Functions",
-    puzzlets: functionsPuzzlets,
-  };
   const outroModule = {
     name: "Outro",
     puzzlets: [outroPuzzlet],
   };
 
-  return new Lesson([introModule, functionsModule, outroModule]);
+  return new Lesson([
+    introModule,
+    functionsModule,
+    assignmentModule,
+    outroModule,
+  ]);
 }

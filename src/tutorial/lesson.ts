@@ -37,6 +37,7 @@ export interface Puzzlet {
   name: string;
   instructions: AnimationStep[];
   examples: AnimationStep[];
+  clearEditorOnStart?: boolean;
   successCondition: (compilation: Compilation) => boolean;
 }
 
