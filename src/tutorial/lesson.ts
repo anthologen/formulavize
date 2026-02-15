@@ -1,48 +1,9 @@
 import { Compilation } from "../compiler/compilation";
 
-export enum TypingSpeed {
-  Instant = 0,
-  Fast = 20,
-  Medium = 40,
-  Slow = 80,
-}
-
 export interface AnimationStep {
   text: string;
   typingSpeedDelayMs: number;
 }
-
-export function createAnimationStep(
-  text: string,
-  typingSpeed: number = TypingSpeed.Medium,
-): AnimationStep {
-  return {
-    text,
-    typingSpeedDelayMs: typingSpeed,
-  };
-}
-
-const createSpeedHelper =
-  (speed: TypingSpeed) =>
-  (text: string): AnimationStep =>
-    createAnimationStep(text, speed);
-
-export const instant = createSpeedHelper(TypingSpeed.Instant);
-export const fast = createSpeedHelper(TypingSpeed.Fast);
-export const normal = createSpeedHelper(TypingSpeed.Medium);
-export const slow = createSpeedHelper(TypingSpeed.Slow);
-
-export const dramatic = (text: string): AnimationStep[] => {
-  // Type each word with a dramatic pause, then end with a newline
-  const dramaticDelay = 500;
-  const words = text.split(" ");
-  const steps = words.flatMap((word, index) =>
-    index < words.length - 1
-      ? [fast(word), createAnimationStep(" ", dramaticDelay)]
-      : [fast(word)],
-  );
-  return [...steps, createAnimationStep("\n", dramaticDelay)];
-};
 
 // Teach each grammar rule as a ludeme
 export interface Puzzlet {

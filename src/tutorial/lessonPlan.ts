@@ -1,4 +1,4 @@
-import { Lesson, Puzzlet, normal, fast, slow, dramatic } from "./lesson";
+import { Lesson, Puzzlet } from "./lesson";
 import { Compilation } from "src/compiler/compilation";
 import {
   NodeType,
@@ -6,6 +6,7 @@ import {
   NamedStyleTreeNode,
 } from "src/compiler/ast";
 import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
+import { normal, fast, slow, dramatic } from "./animationHelpers";
 import {
   getInDegree,
   getOutDegree,
