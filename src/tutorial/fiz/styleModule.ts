@@ -71,7 +71,7 @@ const stylePuzzlets: Puzzlet[] = [
       fast("}\n"),
       fast("third() {\n"),
       fast("  //#mix #match\n"),
-      fast("}"),
+      fast("}\n"),
     ],
     successCondition: (compilation: Compilation) => {
       const flattenedStyles = compilation.DAG.getFlattenedStyles();
@@ -156,26 +156,6 @@ const stylePuzzlets: Puzzlet[] = [
     },
   },
   {
-    name: "Put a Label on it",
-    instructions: [
-      normal("The 'label' style property will override the current name.\n"),
-      normal("Extra labels can be shown by adding strings to a { }.\n"),
-      normal("Uncomment the strings in { } to see the changes."),
-    ],
-    examples: [
-      fast("sixth() {\n"),
-      fast('  //"this extra label"\n'),
-      fast('  //"spans two lines"\n'),
-      fast("}\n"),
-    ],
-    successCondition: (compilation: Compilation) => {
-      return compilation.DAG.getNodeList().some((node) => {
-        const descriptionValue = node.styleProperties.get(DESCRIPTION_PROPERTY);
-        return descriptionValue?.includes("\n") ?? false;
-      });
-    },
-  },
-  {
     name: "In a Bind",
     instructions: [
       normal("Style bindings associate style tags with keywords.\n"),
@@ -208,6 +188,26 @@ const stylePuzzlets: Puzzlet[] = [
 
         // Check if any node uses this binding
         return nodes.some((node) => node.name === keyword);
+      });
+    },
+  },
+  {
+    name: "Put a Label on it",
+    instructions: [
+      normal("The 'label' style property will override the current name.\n"),
+      normal("Extra labels can be shown by adding strings to a { }.\n"),
+      normal("Uncomment the strings in { } to see the changes."),
+    ],
+    examples: [
+      fast("main_label() {\n"),
+      fast('  //"this extra label"\n'),
+      fast('  //"spans two lines"\n'),
+      fast("}\n"),
+    ],
+    successCondition: (compilation: Compilation) => {
+      return compilation.DAG.getNodeList().some((node) => {
+        const descriptionValue = node.styleProperties.get(DESCRIPTION_PROPERTY);
+        return descriptionValue?.includes("\n") ?? false;
       });
     },
   },
