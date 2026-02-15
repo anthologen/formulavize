@@ -20,12 +20,14 @@ export interface LudicModule {
 }
 
 export class Lesson {
+  private readonly name: string;
   private readonly modules: LudicModule[];
   private readonly flattenedPuzzlets: Puzzlet[];
   private readonly puzzletIndexToModuleIndex: number[];
   private currentPuzzletIndex: number = 0;
 
-  constructor(modules: LudicModule[]) {
+  constructor(name: string, modules: LudicModule[]) {
+    this.name = name;
     this.modules = modules;
     this.flattenedPuzzlets = this.modules.flatMap((module) => module.puzzlets);
 
@@ -33,6 +35,10 @@ export class Lesson {
     this.puzzletIndexToModuleIndex = this.modules.flatMap(
       (module, moduleIndex) => Array(module.puzzlets.length).fill(moduleIndex),
     );
+  }
+
+  get Name(): string {
+    return this.name;
   }
 
   public getCurrentPuzzletIndex(): number {

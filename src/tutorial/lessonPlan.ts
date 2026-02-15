@@ -500,7 +500,7 @@ export function createFizLesson(): Lesson {
     puzzlets: [outroPuzzlet],
   };
 
-  return new Lesson([
+  return new Lesson("fiz Tutorial", [
     introModule,
     functionsModule,
     assignmentModule,
