@@ -1,5 +1,5 @@
 import { Lesson, Puzzlet } from "./lesson";
-import { createFizLesson } from "./lessonPlan";
+import { createFizLesson } from "./fiz/lessonPlan";
 import { Compilation } from "../compiler/compilation";
 
 export class TutorialManager {
