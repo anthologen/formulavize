@@ -1,12 +1,51 @@
 import { Lesson, Puzzlet, normal, fast, slow, dramatic } from "./lesson";
 import { Compilation } from "src/compiler/compilation";
-import { DagElement } from "src/compiler/dag";
+import { DagElement, DagEdge } from "src/compiler/dag";
 import {
   NodeType,
   AssignmentTreeNode,
   NamedStyleTreeNode,
 } from "src/compiler/ast";
 import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
+
+// Helper function to get in-degree of a node by ID
+function getInDegree(nodeId: string, edgeList: DagEdge[]): number {
+  return edgeList.filter((edge) => edge.destNodeId === nodeId).length;
+}
+
+// Helper function to get out-degree of a node by ID
+function getOutDegree(nodeId: string, edgeList: DagEdge[]): number {
+  return edgeList.filter((edge) => edge.srcNodeId === nodeId).length;
+}
+
+// Helper function to create a map of node IDs to variable name counts
+function createNodeIdToVarNameCount(
+  varNameToNodeIdMap: Map<string, string>,
+): Map<string, number> {
+  const nodeIdToVarNameCount = new Map<string, number>();
+  varNameToNodeIdMap.forEach((nodeId) => {
+    nodeIdToVarNameCount.set(
+      nodeId,
+      (nodeIdToVarNameCount.get(nodeId) ?? 0) + 1,
+    );
+  });
+  return nodeIdToVarNameCount;
+}
+
+// Helper function to get nodes that use at least one style tag with properties
+function getStyleTaggedNodes(
+  flattenedStyles: Map<string, Map<string, string>>,
+  nodes: DagElement[],
+): DagElement[] {
+  return nodes.filter((node) => {
+    return node.styleTags.some((tag) => {
+      const tagKey = tag.join(".");
+      const properties = flattenedStyles.get(tagKey);
+      if (!properties) return false;
+      return properties.size > 0;
+    });
+  });
+}
 
 export function createFizLesson(): Lesson {
   // Intro module
@@ -51,11 +90,9 @@ export function createFizLesson(): Lesson {
       ],
       examples: [],
       successCondition: (compilation: Compilation) => {
+        const edgeList = compilation.DAG.getEdgeList();
         return compilation.DAG.getNodeList().some(
-          (node) =>
-            compilation.DAG.getEdgeList().filter(
-              (edge) => edge.destNodeId === node.id,
-            ).length >= 2,
+          (node) => getInDegree(node.id, edgeList) >= 2,
         );
       },
     },
@@ -67,13 +104,10 @@ export function createFizLesson(): Lesson {
       ],
       examples: [],
       successCondition: (compilation: Compilation) => {
+        const edgeList = compilation.DAG.getEdgeList();
         return compilation.DAG.getNodeList().some((node) => {
-          const inDegree = compilation.DAG.getEdgeList().filter(
-            (edge) => edge.destNodeId === node.id,
-          ).length;
-          const outDegree = compilation.DAG.getEdgeList().filter(
-            (edge) => edge.srcNodeId === node.id,
-          ).length;
+          const inDegree = getInDegree(node.id, edgeList);
+          const outDegree = getOutDegree(node.id, edgeList);
           return inDegree >= 1 && outDegree >= 1;
         });
       },
@@ -162,21 +196,14 @@ export function createFizLesson(): Lesson {
 
         // Check DAG for alias usage
         const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
-        const nodeIdToVarNameCount = new Map<string, number>();
-        varNameToNodeIdMap.forEach((nodeId) => {
-          nodeIdToVarNameCount.set(
-            nodeId,
-            (nodeIdToVarNameCount.get(nodeId) ?? 0) + 1,
-          );
-        });
+        const nodeIdToVarNameCount =
+          createNodeIdToVarNameCount(varNameToNodeIdMap);
+        const edgeList = compilation.DAG.getEdgeList();
         const hasAliasUsedInDAG = Array.from(
           nodeIdToVarNameCount.entries(),
         ).some(
           ([nodeId, count]) =>
-            count >= 2 &&
-            compilation.DAG.getEdgeList().filter(
-              (edge) => edge.srcNodeId === nodeId,
-            ).length >= 2,
+            count >= 2 && getOutDegree(nodeId, edgeList) >= 2,
         );
 
         return hasVariableToVariableAssignment && hasAliasUsedInDAG;
@@ -205,21 +232,14 @@ export function createFizLesson(): Lesson {
 
         // Check DAG for multiple variables referencing same node
         const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
-        const nodeIdToVarNameCount = new Map<string, number>();
-        varNameToNodeIdMap.forEach((nodeId) => {
-          nodeIdToVarNameCount.set(
-            nodeId,
-            (nodeIdToVarNameCount.get(nodeId) ?? 0) + 1,
-          );
-        });
+        const nodeIdToVarNameCount =
+          createNodeIdToVarNameCount(varNameToNodeIdMap);
+        const edgeList = compilation.DAG.getEdgeList();
         const hasMultipleVarsInDAG = Array.from(
           nodeIdToVarNameCount.entries(),
         ).some(
           ([nodeId, count]) =>
-            count >= 2 &&
-            compilation.DAG.getEdgeList().filter(
-              (edge) => edge.srcNodeId === nodeId,
-            ).length >= 2,
+            count >= 2 && getOutDegree(nodeId, edgeList) >= 2,
         );
 
         return hasMultiVariableAssignment && hasMultipleVarsInDAG;
@@ -243,23 +263,24 @@ export function createFizLesson(): Lesson {
 
         if (nodeList.length < 4 || edgeList.length < 4) return false;
 
-        const getInDegree = (node: DagElement) =>
-          edgeList.filter((e) => e.destNodeId === node.id).length;
-        const getOutDegree = (node: DagElement) =>
-          edgeList.filter((e) => e.srcNodeId === node.id).length;
-
         const topNode = nodeList.find(
-          (node) => getInDegree(node) === 0 && getOutDegree(node) === 2,
+          (node) =>
+            getInDegree(node.id, edgeList) === 0 &&
+            getOutDegree(node.id, edgeList) === 2,
         );
         if (!topNode) return false;
 
         const bottomNode = nodeList.find(
-          (node) => getInDegree(node) === 2 && getOutDegree(node) === 0,
+          (node) =>
+            getInDegree(node.id, edgeList) === 2 &&
+            getOutDegree(node.id, edgeList) === 0,
         );
         if (!bottomNode) return false;
 
         const middleNodes = nodeList.filter(
-          (node) => getInDegree(node) === 1 && getOutDegree(node) === 1,
+          (node) =>
+            getInDegree(node.id, edgeList) === 1 &&
+            getOutDegree(node.id, edgeList) === 1,
         );
         if (middleNodes.length < 2) return false;
 
@@ -327,16 +348,7 @@ export function createFizLesson(): Lesson {
       successCondition: (compilation: Compilation) => {
         const flattenedStyles = compilation.DAG.getFlattenedStyles();
         const nodes = compilation.DAG.getNodeList();
-        // Find style tags with > 0 property and check if any node uses them
-        return Array.from(flattenedStyles.entries()).some(
-          ([tagName, properties]) => {
-            if (properties.size == 0) return false;
-            // Check if any node uses this non-empty tag
-            return nodes.some((node) =>
-              node.styleTags.some((tag) => tag.join(".") === tagName),
-            );
-          },
-        );
+        return getStyleTaggedNodes(flattenedStyles, nodes).length > 0;
       },
     },
     {
@@ -365,7 +377,9 @@ export function createFizLesson(): Lesson {
           (properties) => properties.size > 0,
         ).length;
         if (nonEmptyTagCount < 2) return false;
-        return nodes.some((node) => node.styleTags.length >= 2);
+        return getStyleTaggedNodes(flattenedStyles, nodes).some(
+          (node) => node.styleTags.length >= 2,
+        );
       },
     },
     {
