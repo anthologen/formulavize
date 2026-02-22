@@ -211,6 +211,69 @@ const stylePuzzlets: Puzzlet[] = [
       });
     },
   },
+  {
+    name: "FizBuzz",
+    instructions: [
+      normal("It's time to mix things up!\n"),
+      normal("Show that you've got style by refactoring the recipe below.\n"),
+      normal("Make keyword bindings for water, honey, seltzer, and serve.\n"),
+      normal("Apply all existing style properties through these bindings.\n"),
+    ],
+    examples: [
+      fast('#temperature{ shape: "round-diamond" }\n'),
+      fast('#hot{ background-color: "red" }\n'),
+      fast('#cold{ background-color: "blue" }\n'),
+      fast('#watery{ background-color: "lightblue" }\n'),
+      fast('#wax{ shape: "hexagon"; background-color: "gold" }\n'),
+      fast('#can{ shape: "barrel" }\n'),
+      fast("\n"),
+      fast("%heat{ #temperature #hot }\n"),
+      fast("%cool{ #temperature #cold }\n"),
+      fast("\n"),
+      fast("w = water(){ #watery }\n"),
+      fast("hot_water = heat(w)\n"),
+      fast("h = honey(){ #wax }\n"),
+      fast("honey_syrup = mix(hot_water, h)\n"),
+      fast("buzz = cool(honey_syrup)\n"),
+      fast("fizz = seltzer() { #watery #can }\n"),
+      fast("drink = mix(fizz, buzz)\n"),
+      fast("serve(drink) {\n"),
+      fast('  shape: "bottom-round-rectangle"\n'),
+      fast('  background-color: "silver"\n'),
+      fast("}\n"),
+    ],
+    clearEditorOnStart: true,
+    successCondition: (compilation: Compilation) => {
+      const expectedProperties = new Map([
+        ["water", new Set(["background-color"])],
+        ["honey", new Set(["shape", "background-color"])],
+        ["seltzer", new Set(["background-color", "shape"])],
+        ["serve", new Set(["shape", "background-color"])],
+      ]);
+
+      const bindings = compilation.DAG.getStyleBindings();
+      const flattenedStyles = compilation.DAG.getFlattenedStyles();
+
+      // Check that each required keyword has all expected properties
+      return Array.from(expectedProperties.entries()).every(
+        ([keyword, expectedProps]) => {
+          const styleTags = bindings.get(keyword);
+          if (!styleTags?.length) return false;
+
+          // Collect all properties from this keyword's style tags
+          const collectedProperties = new Set(
+            styleTags.flatMap((styleTag) => {
+              const properties = flattenedStyles.get(styleTag.join("."));
+              return properties ? Array.from(properties.keys()) : [];
+            }),
+          );
+
+          // Check if all expected properties are present
+          return expectedProps.isSubsetOf(collectedProperties);
+        },
+      );
+    },
+  },
 ];
 
 export const styleModule = {
