@@ -26,7 +26,7 @@ export interface IRenderer {
    * Export the current visualization as a file.
    * @param options Export configuration options
    */
-  export(options: FileExportOptions): void;
+  export(options: FileExportOptions): Promise<void>;
 }
 
 /**

@@ -32,9 +32,10 @@ import { makeCyElements } from "./cyGraphFactory";
 import { makeCyStylesheets } from "./cyStyleSheetsFactory";
 import {
   setupCyPoppers,
-  addDescriptionGhostNodes,
+  collectDescriptions,
   PopperCleanup,
 } from "./cyPopperExtender";
+import { injectDescriptionsIntoSvg } from "./svgDescriptionInjector";
 import { diffCyElements, applyDiff } from "./cyDiffer";
 import { Dag } from "../../compiler/dag";
 import { ExportFormat } from "../../compiler/constants";
@@ -99,6 +100,126 @@ const layoutOptions = {
     return orderA.length - orderB.length;
   },
 } satisfies DagreLayoutOptions;
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Failed to load image"));
+    img.src = src;
+  });
+}
+
+interface DescriptionPosition {
+  lines: string[];
+  centerX: number;
+  topY: number;
+  bottomY: number;
+  font: string;
+  fillStyle: string;
+  textAlign: string;
+  lineHeight: number;
+}
+
+function computeDescriptionPositions(
+  descriptions: Map<string, import("./cyPopperExtender").DescriptionData[]>,
+  cy: cytoscape.Core,
+  graphBB: { x1: number; y1: number },
+  effectiveScale: number,
+): DescriptionPosition[] {
+  const result: DescriptionPosition[] = [];
+
+  for (const [id, descList] of descriptions) {
+    const ele = cy.getElementById(id);
+    if (ele.empty()) continue;
+
+    const eleBB = ele.boundingBox({ includeLabels: true });
+    const centerX = ((eleBB.x1 + eleBB.x2) / 2 - graphBB.x1) * effectiveScale;
+    // Small gap between the label and the first description line
+    const gap = 4 * effectiveScale;
+    let nextY = (eleBB.y2 - graphBB.y1) * effectiveScale + gap;
+
+    for (const desc of descList) {
+      const props = desc.descriptionStyleProperties;
+      const rawSize = props.get("font-size") ?? "14";
+      const parsedSize = parseFloat(rawSize);
+      const scaledFontSize = parsedSize * effectiveScale;
+      const fontWeight = props.get("font-weight") ?? "normal";
+      const fontStyle = props.get("font-style") ?? "normal";
+      const fontFamily = props.get("font-family") ?? "sans-serif";
+      const color = props.get("color") ?? "black";
+      const textAlign = props.get("text-align") ?? "center";
+
+      const font = `${fontStyle} ${fontWeight} ${scaledFontSize}px ${fontFamily}`;
+      const lineHeight = parsedSize * 1.4 * effectiveScale;
+      const lines = desc.description.split(/\r\n|\r|\n/);
+      const blockHeight = lines.length * lineHeight;
+
+      result.push({
+        lines,
+        centerX,
+        topY: nextY,
+        bottomY: nextY + blockHeight,
+        font,
+        fillStyle: color,
+        textAlign,
+        lineHeight,
+      });
+
+      nextY += blockHeight;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Draw a description block on the canvas.
+ *
+ * CSS text-align aligns lines within a block container (the widest line
+ * determines the block width).  The block itself is centered below the
+ * parent element.  We replicate this by measuring all line widths, computing
+ * a per-line x based on the alignment, then drawing.
+ */
+function drawDescription(
+  ctx: CanvasRenderingContext2D,
+  dp: DescriptionPosition,
+  xOffset: number = 0,
+): void {
+  ctx.save();
+  ctx.font = dp.font;
+  ctx.fillStyle = dp.fillStyle;
+  ctx.textBaseline = "top";
+
+  // Measure the widest line to get the block width
+  const lineWidths = dp.lines.map((line) => ctx.measureText(line).width);
+  const blockWidth = Math.max(...lineWidths, 0);
+
+  // The block is centered at centerX
+  const blockLeft = dp.centerX + xOffset - blockWidth / 2;
+  const blockRight = dp.centerX + xOffset + blockWidth / 2;
+
+  let y = dp.topY;
+  for (let i = 0; i < dp.lines.length; i++) {
+    let x: number;
+    if (dp.textAlign === "right") {
+      // Right-align: right edge of each line matches block right edge
+      ctx.textAlign = "right";
+      x = blockRight;
+    } else if (dp.textAlign === "left") {
+      // Left-align: left edge of each line matches block left edge
+      ctx.textAlign = "left";
+      x = blockLeft;
+    } else {
+      // Center: each line centered within the block
+      ctx.textAlign = "center";
+      x = dp.centerX + xOffset;
+    }
+    ctx.fillText(dp.lines[i], x, y);
+    y += dp.lineHeight;
+  }
+  ctx.restore();
+}
 
 /**
  * CytoscapeRenderer - A renderer using Cytoscape.js for DAG visualization.
@@ -220,68 +341,140 @@ const CytoscapeRenderer = defineComponent({
       this.previousElements = newElements;
     },
 
-    addGhostNodes(): string[] {
-      if (!this.cy) return [];
-      return addDescriptionGhostNodes(this.cy, this.dag);
-    },
-
-    removeGhostNodes(ghostIds: string[]): void {
-      if (!this.cy) return;
-      for (const id of ghostIds) {
-        this.cy.getElementById(id).remove();
-      }
-    },
-
-    export(exportOptions: FileExportOptions): void {
+    async export(exportOptions: FileExportOptions): Promise<void> {
       if (!this.cy) {
         console.error("Cytoscape instance not initialized");
         return;
       }
 
-      // Create invisible ghost nodes with description text and styling
-      // so Cytoscape's canvas-based exporters capture them natively.
-      const ghostIds = this.addGhostNodes();
-
-      // Issue: the svg exporter rasterizes images in the graph.
-      // The workaround for exporting large images is to export a scaled up
-      // raster image and then downscale it in an image editor.
-      // Ideally, this issue should be addressed in the underlying library.
-      // Speculatively, we might be able to swap the image tags in the svg.
-      // Svg export is still a useful starting point for those who want to
-      // manually edit layouts in an svg editor.
       const scaleFactor = exportOptions.scalingFactor;
-      const imgBlob = match(exportOptions.fileType)
-        .with(ExportFormat.PNG, () => {
-          return this.cy!.png({
-            full: true,
-            scale: scaleFactor,
-            output: "blob",
-          });
+      const fileName = exportOptions.fileName + "." + exportOptions.fileType;
+
+      const imgBlob = await match(exportOptions.fileType)
+        .with(ExportFormat.PNG, ExportFormat.JPG, async () => {
+          return this.exportRaster(exportOptions.fileType, scaleFactor);
         })
-        .with(ExportFormat.JPG, () => {
-          return this.cy!.jpg({
-            full: true,
-            scale: scaleFactor,
-            output: "blob",
-          });
-        })
-        .with(ExportFormat.SVG, () => {
-          // @ts-expect-error: missing types
-          const svgData = this.cy!.svg({ full: true, scale: scaleFactor });
-          return new Blob([svgData], {
-            type: "image/svg+xml;charset=utf-8",
-          });
+        .with(ExportFormat.SVG, async () => {
+          return this.exportSvg(scaleFactor);
         })
         .otherwise((format) => {
           console.error(`Unsupported export format: ${format}`);
           return null;
         });
 
-      this.removeGhostNodes(ghostIds);
-
       if (!imgBlob) return;
-      const fileName = exportOptions.fileName + "." + exportOptions.fileType;
       saveAs(imgBlob, fileName);
+    },
+
+    /**
+     * Export raster image by compositing Cytoscape's canvas export with
+     * descriptions drawn via the Canvas 2D API.
+     */
+    async exportRaster(
+      fileType: ExportFormat,
+      scaleFactor: number,
+    ): Promise<Blob | null> {
+      if (!this.cy) return null;
+
+      const descriptions = collectDescriptions(this.cy, this.dag);
+
+      // Fast path: no descriptions — use Cytoscape's built-in export directly
+      if (descriptions.size === 0) {
+        if (fileType === ExportFormat.PNG) {
+          return this.cy.png({
+            full: true,
+            scale: scaleFactor,
+            output: "blob",
+          });
+        }
+        return this.cy.jpg({
+          full: true,
+          scale: scaleFactor,
+          output: "blob",
+        });
+      }
+
+      // Get base image from Cytoscape's canvas exporter
+      const cyDataUrl: string = this.cy.png({
+        full: true,
+        scale: scaleFactor,
+      });
+      const baseImg = await loadImage(cyDataUrl);
+
+      // cy.png() internally scales by scaleFactor * devicePixelRatio
+      const effectiveScale = scaleFactor * window.devicePixelRatio;
+      const graphBB = this.cy.elements().boundingBox({ includeLabels: true });
+      let maxBottom = baseImg.height;
+      const descPositions = computeDescriptionPositions(
+        descriptions,
+        this.cy,
+        graphBB,
+        effectiveScale,
+      );
+      for (const dp of descPositions) {
+        maxBottom = Math.max(maxBottom, dp.bottomY);
+      }
+
+      // Measure text widths to determine if canvas needs to be wider
+      const measureCanvas = document.createElement("canvas");
+      const measureCtx = measureCanvas.getContext("2d")!;
+      let maxRight = baseImg.width;
+      let minLeft = 0;
+      for (const dp of descPositions) {
+        measureCtx.font = dp.font;
+        for (const line of dp.lines) {
+          const halfWidth = measureCtx.measureText(line).width / 2;
+          maxRight = Math.max(maxRight, dp.centerX + halfWidth);
+          minLeft = Math.min(minLeft, dp.centerX - halfWidth);
+        }
+      }
+
+      // If descriptions extend left of the graph, shift everything right
+      const leftPad = minLeft < 0 ? Math.ceil(-minLeft) : 0;
+      const canvasWidth = Math.ceil(maxRight) + leftPad;
+
+      // Create offscreen canvas and draw base image
+      const canvas = document.createElement("canvas");
+      canvas.width = canvasWidth;
+      canvas.height = maxBottom;
+      const ctx = canvas.getContext("2d")!;
+
+      if (fileType === ExportFormat.JPG) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      ctx.drawImage(baseImg, leftPad, 0);
+
+      // Draw each description (shifted right by leftPad if needed)
+      for (const dp of descPositions) {
+        drawDescription(ctx, dp, leftPad);
+      }
+
+      const mimeType =
+        fileType === ExportFormat.PNG ? "image/png" : "image/jpeg";
+      return new Promise((resolve) => canvas.toBlob(resolve, mimeType));
+    },
+
+    /**
+     * Export SVG with foreignObject-injected descriptions for full CSS styling.
+     */
+    exportSvg(scaleFactor: number): Blob | null {
+      if (!this.cy) return null;
+
+      // @ts-expect-error: missing types
+      const baseSvg: string = this.cy.svg({ full: true, scale: scaleFactor });
+      const descriptions = collectDescriptions(this.cy, this.dag);
+      // cytoscape-svg multiplies scale by pixelRatio (see convert-to-svg.js:60-63)
+      const effectiveScale = scaleFactor * window.devicePixelRatio;
+      const enrichedSvg = injectDescriptionsIntoSvg(
+        baseSvg,
+        descriptions,
+        this.cy,
+        effectiveScale,
+      );
+      return new Blob([enrichedSvg], {
+        type: "image/svg+xml;charset=utf-8",
+      });
     },
   },
 });

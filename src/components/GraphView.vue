@@ -42,9 +42,9 @@ export default defineComponent({
      * Export the current visualization as a file.
      * This method delegates to the renderer's export implementation.
      */
-    export(exportOptions: FileExportOptions): void {
+    async export(exportOptions: FileExportOptions): Promise<void> {
       const renderer = this.$refs.renderer as IRenderer;
-      renderer?.export?.(exportOptions);
+      await renderer?.export?.(exportOptions);
     },
   },
 });

@@ -55,7 +55,7 @@ const MinimalExampleRenderer = defineComponent({
       });
     },
 
-    export(exportOptions: FileExportOptions): void {
+    async export(exportOptions: FileExportOptions): Promise<void> {
       if (exportOptions.fileType !== ExportFormat.TXT) {
         console.error(
           `MinimalExampleRenderer: Unsupported export format "${exportOptions.fileType}". Only TXT is supported.`,

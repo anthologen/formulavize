@@ -217,7 +217,7 @@ function handleExport(exportOptions: {
   fileType: ExportFormat;
   scalingFactor: number;
 }) {
-  graphView.value?.export(exportOptions);
+  graphView.value?.export(exportOptions).catch(console.error);
 }
 
 function onTutorialClicked() {
