@@ -23,7 +23,12 @@ import {
 import svg from "cytoscape-svg";
 import { makeCyElements } from "./cyGraphFactory";
 import { makeCyStylesheets } from "./cyStyleSheetsFactory";
-import { dagreLayoutOptions } from "./cyLayout";
+import { getCanvasBackgroundColor } from "./cyRendererDirectives";
+import {
+  makeDagreLayoutOptions,
+  getRankDirection,
+  RankDirection,
+} from "./cyLayout";
 import { exportCyToBlob } from "./cyExport";
 import {
   setupCyPoppers,
@@ -96,6 +101,7 @@ const CytoscapeRenderer = defineComponent({
       cy: null as Core | null,
       previousElements: null as ElementsDefinition | null,
       previousStylesheetsJson: null as string | null,
+      previousRankDir: undefined as RankDirection | undefined,
       popperCleanup: null as PopperCleanup | null,
     };
   },
@@ -133,7 +139,7 @@ const CytoscapeRenderer = defineComponent({
     runLayout(): void {
       Promise.resolve().then(() => {
         if (this.cy) {
-          this.cy.layout(dagreLayoutOptions).run();
+          this.cy.layout(makeDagreLayoutOptions(this.dag)).run();
         }
       });
     },
@@ -148,10 +154,21 @@ const CytoscapeRenderer = defineComponent({
       }
     },
 
+    // Paint the container with the '^cytoscape' background so the editor shows
+    // what an export will contain. Clearing the inline style hands the
+    // background back to the themed --fviz-bg rule.
+    applyCanvasBackground(): void {
+      const container = this.$refs.container as HTMLElement | undefined;
+      if (!container) return;
+      container.style.backgroundColor =
+        getCanvasBackgroundColor(this.dag) ?? "";
+    },
+
     applyThemeStyles(): void {
       if (!this.cy) return;
       const newStylesheets = makeCyStylesheets(this.dag, this.isDark);
       this.applyStyles(newStylesheets);
+      this.applyCanvasBackground();
     },
 
     updateDag(dag: Dag): void {
@@ -170,6 +187,7 @@ const CytoscapeRenderer = defineComponent({
           dag,
           this.$refs.popperContainer as HTMLElement,
         );
+        this.previousRankDir = getRankDirection(dag);
         this.runLayout();
       } else {
         const diff = diffCyElements(this.previousElements, newElements);
@@ -194,10 +212,19 @@ const CytoscapeRenderer = defineComponent({
           this.$refs.popperContainer as HTMLElement,
         );
 
+        // Editing only a '^cytoscape{ rankDir }' line leaves the element set
+        // identical, so the topology check alone would never relayout and the
+        // directive would appear to do nothing. Compare the resolved direction
+        // so an unrecognized value doesn't trigger a pointless relayout.
+        const rankDir = getRankDirection(dag);
+        const rankDirChanged = rankDir !== this.previousRankDir;
+        this.previousRankDir = rankDir;
+
         // Avoid unnecessary layout runs by checking if the topology has changed
-        if (diff.topologyChanged) this.runLayout();
+        if (diff.topologyChanged || rankDirChanged) this.runLayout();
       }
 
+      this.applyCanvasBackground();
       this.previousElements = newElements;
     },
 
@@ -223,7 +250,10 @@ const CytoscapeRenderer = defineComponent({
       // so Cytoscape's canvas-based exporters capture them natively.
       const ghostIds = this.addGhostNodes();
 
-      const imgBlob = exportCyToBlob(this.cy, exportOptions);
+      const imgBlob = exportCyToBlob(this.cy, {
+        ...exportOptions,
+        backgroundColor: getCanvasBackgroundColor(this.dag),
+      });
 
       this.removeGhostNodes(ghostIds);
 
