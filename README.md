@@ -87,6 +87,22 @@ ingest[
 d(ingest.cleaned)
 ```
 
+Record metadata about the recipe itself in an **about note**, written with `~`:
+
+```
+~about{
+  author: "Remy"
+  version: 2
+  license: "MIT"
+}
+```
+
+About notes are a deliberate extension point. The compiler validates neither the
+note name nor its keys — a note is closer to a semi-structured comment — so
+tooling is free to agree on its own conventions for things like attribution,
+watermarking, or license compliance. Notes describe the whole file, so they are
+allowed only at the top level; one inside a namespace is a compile error.
+
 ### Language at a glance
 
 | Construct           | Syntax                 | Example                                  |
@@ -104,6 +120,7 @@ d(ingest.cleaned)
 | Style binding       | `%keyword { styles }`  | `%multiply{ background-color: #33acff }` |
 | Global binding      | `*keyword { styles }`  | `*node{ color: "black" }`                |
 | Renderer directive  | `^name{ keys }`        | `^cytoscape{ layout: "elk" }`            |
+| About note          | `~name{ keys }`        | `~about{ author: "Remy" }`               |
 | Comment             | `//` or `/* */`        | `// a comment`                           |
 
 Statements are separated by newlines; use `;` to put several on one line. See
@@ -121,6 +138,8 @@ Statements are separated by newlines; use `;` to put several on one line. See
 - **Namespaces** — nest statements into sub-graphs, pass them arguments, and
   style them as a unit.
 - **Imports** — pull in other `.fiz` files by path or URL, with caching.
+- **About notes** — attach free-form `~` metadata to a recipe for tooling to
+  interpret, carried through to the compiled DAG.
 - **Export** — download the graph as PNG, JPG, or SVG at a configurable scale.
 - **Debug tabs** — inspect the AST, DAG, errors, autocomplete state, and cached
   imports for the current recipe.
